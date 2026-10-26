@@ -25,7 +25,9 @@
   let routeRequest = $state.raw<RouteRequest | null>(null)
   let routeError = $state<string | null>(null)
 
-  let busy = $state({ reach: false, route: false })
+  let busy = $state({ reach: false, route: false, alternatives: false })
+  /** Route picked by the pilot; null picks automatically. */
+  let selectedRoute = $state<number | null>(null)
 
   // Narrow screens show the profile inside the panel rather than over the map.
   const narrowQuery = matchMedia('(max-width: 640px)')
@@ -51,6 +53,8 @@
         return
       }
       routeError = null
+      // A different start, landing or assumption: back to automatic selection.
+      if (!routeRequest || routeKey(routeRequest) !== routeKey(request)) selectedRoute = null
       route = outcome.result
       routeRequest = request
     },
@@ -115,10 +119,32 @@
     }
   })
 
-  /** Route shown on the map and in the profile: the pilot's if it reaches, else the required one. */
-  const shownRoute = $derived(route && settings.landing ? (route.withGlideRatio ?? route.required) : null)
-  const routeLine: RouteLine | null = $derived(
-    shownRoute ? { points: shownRoute.profile, dashed: shownRoute === route?.required && !route?.withGlideRatio } : null,
+  /** Glide ratio the routes are judged with: the one of the latest request. */
+  const judgedRatio = $derived(routeRequest?.glideRatio ?? settings.glideRatio)
+
+  /**
+   * Route shown in the profile: the pilot's pick, else the reachable route with the
+   * highest arrival, else the one needing the smallest glide ratio.
+   */
+  const shownRoute = $derived.by(() => {
+    if (!route || !settings.landing || !route.options.length) return null
+    const picked = route.options.find((o) => o.id === selectedRoute)
+    if (picked) return picked
+    const reachable = route.options.filter((o) => judgedRatio >= o.requiredGlideRatio)
+    if (reachable.length) return reachable.reduce((a, b) => (b.length < a.length ? b : a))
+    return route.options[0]
+  })
+  const shownRatio = $derived(shownRoute ? Math.max(judgedRatio, shownRoute.requiredGlideRatio) : judgedRatio)
+
+  const routeLines: RouteLine[] = $derived(
+    route && settings.landing
+      ? route.options.map((o) => ({
+          id: o.id,
+          points: o.vertices,
+          selected: o.id === shownRoute?.id,
+          dashed: judgedRatio < o.requiredGlideRatio,
+        }))
+      : [],
   )
 
   // A highlighted point belongs to the route it was hovered on.
@@ -143,6 +169,11 @@
     }
   })
 
+  function routeKey(r: RouteRequest): string {
+    const { glideRatio, ...rest } = r
+    return JSON.stringify(rest)
+  }
+
   function pick(p: LngLat) {
     if (clickSets === 'landing') {
       settings.landing = p
@@ -158,11 +189,14 @@
     <div class={className}>
       <Profile
         route={shownRoute}
-        isRequired={!route.withGlideRatio}
+        glideRatio={shownRatio}
+        isRequired={shownRatio > judgedRatio}
+        startAltitude={route.startAltitude}
         landingElevation={route.landingElevation}
         arrivalHeight={routeRequest.arrivalHeight}
         clearance={routeRequest.clearance}
         launchZone={routeRequest.launchZone}
+        {bands}
         onhover={(p) => (highlight = p)}
       />
     </div>
@@ -173,7 +207,8 @@
   <MapView
     start={settings.start}
     landing={settings.landing}
-    route={routeLine}
+    routes={routeLines}
+    onselectroute={(id) => (selectedRoute = id)}
     {highlight}
     {overlay}
     {basemap}
@@ -203,9 +238,12 @@
       <RouteSummary
         result={route}
         computing={busy.route}
+        searchingAlternatives={busy.alternatives}
         error={routeError}
-        glideRatio={routeRequest?.glideRatio ?? settings.glideRatio}
+        glideRatio={judgedRatio}
         arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
+        selected={shownRoute?.id ?? null}
+        onselect={(id) => (selectedRoute = id)}
         onclear={() => {
           settings.landing = null
           clickSets = 'landing'

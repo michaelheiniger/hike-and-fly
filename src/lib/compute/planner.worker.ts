@@ -20,8 +20,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     if (message.kind === 'reach') {
       const result = await computeReach(message.request, loadTiles, options)
       post({ id, kind: 'reach', type: 'result', result }, [result.agl.buffer, result.distance.buffer])
-    } else {
+    } else if (message.kind === 'route') {
       post({ id, kind: 'route', type: 'result', result: await planner.plan(message.request) })
+    } else {
+      post({ id, kind: 'alternatives', type: 'result', result: await planner.alternatives(message.request) })
     }
   } catch (err) {
     post({ id, kind, type: 'error', message: err instanceof Error ? err.message : String(err) })

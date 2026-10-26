@@ -6,10 +6,13 @@ export type ReachOutcome = { result: ReachResult } | { error: string }
 export type RouteOutcome = { result: RouteResult } | { error: string }
 
 type Kind = WorkerRequest['kind']
-type Pending = { kind: 'reach'; request: ReachRequest } | { kind: 'route'; request: RouteRequest }
+type Pending =
+  | { kind: 'reach'; request: ReachRequest }
+  | { kind: 'route' | 'alternatives'; request: RouteRequest }
 
 export interface PlannerCallbacks {
   onReach: (outcome: ReachOutcome, request: ReachRequest) => void
+  /** Route results arrive twice: the best route first, then with alternatives. */
   onRoute: (outcome: RouteOutcome, request: RouteRequest) => void
   /** Called whenever the set of busy kinds changes. */
   onBusy?: (busy: Record<Kind, boolean>) => void
@@ -36,6 +39,8 @@ export class PlannerClient {
   }
 
   route(request: RouteRequest): void {
+    // Alternatives for an older request are no longer wanted.
+    this.queued.delete('alternatives')
     this.enqueue({ kind: 'route', request })
   }
 
@@ -64,14 +69,24 @@ export class PlannerClient {
     this.sendNext()
     if (done.kind === 'reach' && message.kind === 'reach') {
       this.callbacks.onReach(message.type === 'result' ? { result: message.result } : { error: message.message }, done.request)
-    } else if (done.kind === 'route' && message.kind === 'route') {
-      this.callbacks.onRoute(message.type === 'result' ? { result: message.result } : { error: message.message }, done.request)
+    } else if (done.kind !== 'reach' && message.kind !== 'reach') {
+      const superseded = this.queued.has('route')
+      if (message.type === 'result') {
+        // Look for alternatives once the best route is shown, unless a newer request waits.
+        if (message.result.alternativesPending && !superseded) {
+          this.queued.set('alternatives', { kind: 'alternatives', request: done.request })
+          if (!this.current) this.sendNext()
+        }
+        if (!(done.kind === 'alternatives' && superseded)) this.callbacks.onRoute({ result: message.result }, done.request)
+      } else {
+        this.callbacks.onRoute({ error: message.message }, done.request)
+      }
     }
     this.notifyBusy()
   }
 
   private notifyBusy(): void {
-    const busy = { reach: false, route: false }
+    const busy = { reach: false, route: false, alternatives: false }
     if (this.current) busy[this.current.kind] = true
     for (const kind of this.queued.keys()) busy[kind] = true
     this.callbacks.onBusy?.(busy)

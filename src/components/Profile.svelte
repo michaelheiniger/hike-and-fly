@@ -1,25 +1,45 @@
 <script lang="ts">
-  import type { Route } from '../lib/compute/route'
+  import type { RouteOption } from '../lib/compute/route'
+  import type { AglBand } from '../lib/render/agl'
   import type { LngLat } from '../lib/terrain/geo'
 
   interface Props {
-    route: Route
-    /** True when this is the route at the required glide ratio, not the pilot's. */
+    route: RouteOption
+    /** Glide ratio drawn: the pilot's, or the route's required one when the pilot's falls short. */
+    glideRatio: number
+    /** True when drawn at the route's required glide ratio. */
     isRequired: boolean
+    startAltitude: number
     landingElevation: number
     arrivalHeight: number
     clearance: number
     launchZone: number
+    /** AGL color bands of the map: the glide path takes the same colors. */
+    bands: AglBand[]
     onhover: (p: LngLat | null) => void
   }
 
-  let { route, isRequired, landingElevation, arrivalHeight, clearance, launchZone, onhover }: Props = $props()
+  let {
+    route,
+    glideRatio,
+    isRequired,
+    startAltitude,
+    landingElevation,
+    arrivalHeight,
+    clearance,
+    launchZone,
+    bands,
+    onhover,
+  }: Props = $props()
 
   let width = $state(600)
   const height = 150
   const margin = { top: 8, right: 12, bottom: 22, left: 46 }
 
-  const points = $derived(route.profile)
+  const points = $derived(
+    route.path.map((p) => ({ ...p, altitude: startAltitude - p.distance / glideRatio })),
+  )
+  const arrivalAgl = $derived(startAltitude - route.length / glideRatio - landingElevation)
   const length = $derived(points.at(-1)?.distance ?? 1)
   const clearanceAt = (d: number) => (launchZone > 0 ? clearance * Math.min(1, d / launchZone) : clearance)
 
@@ -44,6 +64,32 @@
   const terrainLine = $derived(path(points.map((p) => [p.distance, p.terrain])))
   const terrainArea = $derived(`${terrainLine}L${x(length)},${y(yDomain[0])}L${x(0)},${y(yDomain[0])}Z`)
   const glideLine = $derived(path(points.map((p) => [p.distance, p.altitude])))
+
+  /** Map color for a height above ground. */
+  function bandColor(agl: number): string {
+    let b = bands.length - 1
+    while (b > 0 && agl < bands[b].from) b--
+    return bands[b].color
+  }
+
+  /** The glide path split into runs of the same AGL band. */
+  const glideRuns = $derived.by(() => {
+    const runs: { color: string; points: [number, number][] }[] = []
+    for (const p of points) {
+      const color = bandColor(p.altitude - p.terrain)
+      let run = runs[runs.length - 1]
+      if (!run || run.color !== color) {
+        // Start where the previous run ended, so the line stays continuous.
+        const joint = run?.points[run.points.length - 1]
+        run = { color, points: joint ? [joint] : [] }
+        runs.push(run)
+      }
+      run.points.push([p.distance, p.altitude])
+    }
+    return runs.map((r) => ({ color: r.color, d: path(r.points) }))
+  })
+
+  const legendGradient = $derived(`linear-gradient(to right, ${bands.map((b) => b.color).join(', ')})`)
   const clearanceLine = $derived(path(points.map((p) => [p.distance, p.terrain + clearanceAt(p.distance)])))
 
   /** Round axis steps: 1, 2 or 5 × 10^n. */
@@ -82,10 +128,10 @@
 
 <figure class="profile">
   <figcaption>
-    <strong>Profile · glide ratio {route.glideRatio.toFixed(1)}{isRequired ? ' (required)' : ''}</strong>
-    <span>{(route.length / 1000).toFixed(1)} km flown · arrive {Math.round(route.arrivalAgl)} m above the landing</span>
+    <strong>Route {String.fromCharCode(65 + route.id)} · glide ratio {glideRatio.toFixed(1)}{isRequired ? ' (required)' : ''}</strong>
+    <span>{(route.length / 1000).toFixed(1)} km flown · arrive {Math.round(arrivalAgl)} m above the landing</span>
     <span class="legend">
-      <span class="key"><i class="swatch glide"></i>Glide path</span>
+      <span class="key"><i class="swatch glide" style:background={legendGradient}></i>Glide path (AGL colors)</span>
       <span class="key"><i class="swatch clearance"></i>Clearance</span>
       <span class="key"><i class="swatch terrain"></i>Terrain</span>
     </span>
@@ -104,14 +150,17 @@
       <path class="terrain-area" d={terrainArea} />
       <path class="terrain" d={terrainLine} />
       <path class="clearance" d={clearanceLine} />
-      <path class="glide" d={glideLine} />
+      <path class="glide-casing" d={glideLine} />
+      {#each glideRuns as run, i (i)}
+        <path class="glide" d={run.d} stroke={run.color} />
+      {/each}
 
       <!-- Arrival height at the landing. -->
       <line class="reserve" x1={x(length) - 8} x2={x(length)} y1={y(landingElevation + arrivalHeight)} y2={y(landingElevation + arrivalHeight)} />
 
       {#if hovered}
         <line class="crosshair" x1={x(hovered.distance)} x2={x(hovered.distance)} y1={margin.top} y2={margin.top + plotH} />
-        <circle class="dot" cx={x(hovered.distance)} cy={y(hovered.altitude)} r="4" />
+        <circle class="dot" cx={x(hovered.distance)} cy={y(hovered.altitude)} r="4" fill={bandColor(hovered.altitude - hovered.terrain)} />
       {/if}
     </svg>
 
@@ -167,7 +216,9 @@
   }
 
   .swatch.glide {
-    border-color: var(--accent);
+    height: 4px;
+    border: 0;
+    border-radius: 2px;
   }
 
   .swatch.clearance {
@@ -219,10 +270,20 @@
     stroke-dasharray: 4 3;
   }
 
+  /* Dark edge so light band colors stay visible on a light surface. */
+  .glide-casing {
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 5;
+    stroke-linejoin: round;
+    opacity: 0.55;
+  }
+
   .glide {
     fill: none;
-    stroke: var(--accent);
-    stroke-width: 2;
+    stroke-width: 3;
+    stroke-linejoin: round;
+    stroke-linecap: round;
   }
 
   .reserve {
@@ -236,7 +297,6 @@
   }
 
   .dot {
-    fill: var(--accent);
     stroke: var(--surface);
     stroke-width: 2;
   }

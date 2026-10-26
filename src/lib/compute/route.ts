@@ -1,6 +1,7 @@
-import { arriveWith, findRequiredGlideRatio, type Arrival, type ArrivalProblem } from '../glide/required'
-import { traceRoute } from '../glide/search'
-import { cellAt, cellCenter, localDistance, type LngLat } from '../terrain/geo'
+import { corridorMask, requiredGlideRatioFor, shareInside, straightenRoute, type RouteContext, type RouteGeometry } from '../glide/geometry'
+import { arriveWith, findRequiredGlideRatio, type ArrivalProblem } from '../glide/required'
+import { traceRoute, type ElevationGrid } from '../glide/search'
+import { cellAt, localDistance, metersPerDegree, type GeoGrid, type LngLat } from '../terrain/geo'
 import type { ReachRequest } from './reach'
 import {
   DEFAULT_MAX_RADIUS,
@@ -19,24 +20,32 @@ export interface RouteRequest extends ReachRequest {
   arrivalHeight: number
 }
 
-export interface ProfilePoint {
+export interface PathPoint {
   /** Distance flown from the start (m). */
   distance: number
   /** Terrain elevation under the route (m AMSL). */
   terrain: number
-  /** Glider altitude (m AMSL). */
-  altitude: number
   lng: number
   lat: number
 }
 
-export interface Route {
-  glideRatio: number
+/** One way from the start to the landing. Its altitudes follow from any glide ratio ≥ the required one. */
+export interface RouteOption {
+  id: number
+  /** Side of the straight line the route lies on ("South-east"), null when direct. */
+  side: string | null
+  /** Average distance from the straight line (m). */
+  offset: number
+  /** Smallest glide ratio flying this route with the clearance and arrival height. */
+  requiredGlideRatio: number
   /** Distance flown (m). */
   length: number
-  /** Height above the landing on arrival (m). */
-  arrivalAgl: number
-  profile: ProfilePoint[]
+  /** Corners of the route. */
+  vertices: LngLat[]
+  /** Dense points along the route, for the profile. */
+  path: PathPoint[]
+  /** The shortest route with the pilot's glide ratio (rather than a required-ratio search). */
+  shortestWithGlideRatio: boolean
 }
 
 export interface RouteResult {
@@ -44,35 +53,51 @@ export interface RouteResult {
   startAltitude: number
   landingElevation: number
   straightDistance: number
-  /** Route with the smallest glide ratio reaching the landing, null if none up to MAX_GLIDE_RATIO. */
-  required: Route | null
-  /** Route flown with the pilot's glide ratio, null if it does not reach the landing with the arrival height. */
-  withGlideRatio: Route | null
-  /** Height above the landing on arrival with the pilot's glide ratio, -Infinity if not reached at all. */
-  arrivalAgl: number
+  /** Distinct routes, smallest required glide ratio first. Empty if none up to MAX_GLIDE_RATIO. */
+  options: RouteOption[]
+  /** True until the search for alternative routes has run. */
+  alternativesPending: boolean
   cellSize: number
   timings: { terrain: number; search: number }
 }
 
-/** Cells the route grid may use: smaller than the reach grid, as it is searched ~10 times. */
+/** Cells the route grid may use: smaller than the reach grid, as it is searched many times. */
 const ROUTE_MAX_CELLS = 1_000_000
 
-interface Prepared {
+/** Alternatives searched after the best route. */
+const MAX_ALTERNATIVES = 2
+
+interface Candidate {
+  geometry: RouteGeometry
+  required: number
+  /** Band around the route (null for the pilot's route, which is never blocked). */
+  mask: Uint8Array | null
+  shortestWithGlideRatio: boolean
+}
+
+interface Plan {
   key: string
   prepared: PreparedGrid
   problem: ArrivalProblem
+  ctx: RouteContext
   startElevation: number
   landingElevation: number
   straightDistance: number
-  required: Route | null
+  /** Corridor half-width and the distance from the ends where corridors stop (m). */
+  corridor: number
+  keepClear: number
+  found: Candidate[]
+  alternativesDone: boolean
+  terrainTime: number
 }
 
 /**
- * Plans routes from the start to the landing. Keeps the last terrain and required
- * glide ratio: they do not depend on the pilot's glide ratio, which changes often.
+ * Plans routes from the start to the landing. Terrain and required-ratio routes do
+ * not depend on the pilot's glide ratio, which changes often: they are kept for the
+ * last start, landing and assumptions.
  */
 export class RoutePlanner {
-  private last: Prepared | null = null
+  private last: Plan | null = null
   private loadTiles: LoadTiles
   private options: GridOptions
 
@@ -81,39 +106,96 @@ export class RoutePlanner {
     this.options = options
   }
 
+  /** Best route at the required glide ratio, plus the pilot's shortest route. */
   async plan(req: RouteRequest): Promise<RouteResult> {
     const t0 = performance.now()
+    const plan = await this.ensurePlan(req)
+    return this.result(plan, req.glideRatio, performance.now() - t0)
+  }
+
+  /** Same as `plan`, after also searching for alternative routes around other sides. */
+  async alternatives(req: RouteRequest): Promise<RouteResult> {
+    const t0 = performance.now()
+    const plan = await this.ensurePlan(req)
+    if (!plan.alternativesDone) {
+      const { elevationGrid } = plan.prepared
+      const blocked = new Uint8Array(elevationGrid.elevation.length)
+      for (let k = 0; k < MAX_ALTERNATIVES; k++) {
+        const last = plan.found[plan.found.length - 1]
+        if (!last?.mask) break
+        for (let i = 0; i < blocked.length; i++) blocked[i] |= last.mask[i]
+        const candidate = this.searchRequired(plan, blockedGrid(elevationGrid, blocked))
+        if (!candidate) break
+        plan.found.push(candidate)
+      }
+      plan.alternativesDone = true
+    }
+    return this.result(plan, req.glideRatio, performance.now() - t0)
+  }
+
+  private async ensurePlan(req: RouteRequest): Promise<Plan> {
     const { glideRatio, ...rest } = req
     const key = JSON.stringify(rest)
-    let searchTime = 0
-    if (this.last?.key !== key) {
-      this.last = null
-      const prepared = await this.prepare(req, key)
-      const t1 = performance.now()
-      const found = findRequiredGlideRatio(prepared.prepared.elevationGrid, prepared.problem, prepared.straightDistance)
-      prepared.required = found ? toRoute(prepared.prepared, prepared.problem, found) : null
-      searchTime += performance.now() - t1
-      this.last = prepared
-    }
-    const p = this.last!
-    const t2 = performance.now()
-    const arrival = arriveWith(p.prepared.elevationGrid, p.problem, glideRatio)
-    searchTime += performance.now() - t2
+    if (this.last?.key === key) return this.last
+    this.last = null
+    const t0 = performance.now()
+    const plan = await this.prepare(req, key)
+    plan.terrainTime = performance.now() - t0
+    const best = this.searchRequired(plan, plan.prepared.elevationGrid)
+    if (best) plan.found.push(best)
+    else plan.alternativesDone = true
+    this.last = plan
+    return plan
+  }
 
+  /** Best route on a (possibly blocked) grid at its required glide ratio. */
+  private searchRequired(plan: Plan, grid: ElevationGrid): Candidate | null {
+    const found = findRequiredGlideRatio(grid, plan.problem, plan.straightDistance)
+    if (!found) return null
+    const geometry = straightenRoute(grid, traceRoute(found.result, plan.problem.target), plan.ctx, found.glideRatio)
     return {
-      startElevation: p.startElevation,
-      startAltitude: p.problem.startAltitude,
-      landingElevation: p.landingElevation,
-      straightDistance: p.straightDistance,
-      required: p.required,
-      withGlideRatio: arrival.ok ? toRoute(p.prepared, p.problem, arrival) : null,
-      arrivalAgl: arrival.arrivalAgl,
-      cellSize: p.prepared.cellSize,
-      timings: { terrain: performance.now() - t0 - searchTime, search: searchTime },
+      geometry,
+      required: requiredGlideRatioFor(geometry, plan.ctx),
+      mask: corridorMask(grid, geometry, plan.corridor, plan.keepClear),
+      shortestWithGlideRatio: false,
     }
   }
 
-  private async prepare(req: RouteRequest, key: string): Promise<Prepared> {
+  private result(plan: Plan, glideRatio: number, elapsed: number): RouteResult {
+    const t0 = performance.now()
+    const candidates = plan.found.map((c) => ({ ...c }))
+
+    // The pilot's shortest route, when it is not one of the routes already found.
+    const { elevationGrid } = plan.prepared
+    const arrival = arriveWith(elevationGrid, plan.problem, glideRatio)
+    if (arrival.ok) {
+      const geometry = straightenRoute(elevationGrid, traceRoute(arrival.result, plan.problem.target), plan.ctx, glideRatio)
+      const same = candidates.find((c) => c.mask && shareInside(geometry, c.mask, plan.keepClear) > 0.5)
+      if (same) same.shortestWithGlideRatio = true
+      else {
+        candidates.push({ geometry, required: requiredGlideRatioFor(geometry, plan.ctx), mask: null, shortestWithGlideRatio: true })
+      }
+    }
+    const search = performance.now() - t0
+
+    const options = candidates
+      .filter((c) => Number.isFinite(c.required))
+      .sort((a, b) => a.required - b.required)
+      .map((c, i) => toOption(plan, c, i))
+
+    return {
+      startElevation: plan.startElevation,
+      startAltitude: plan.problem.startAltitude,
+      landingElevation: plan.landingElevation,
+      straightDistance: plan.straightDistance,
+      options,
+      alternativesPending: !plan.alternativesDone,
+      cellSize: plan.prepared.cellSize,
+      timings: { terrain: plan.terrainTime, search: elapsed - plan.terrainTime + search },
+    }
+  }
+
+  private async prepare(req: RouteRequest, key: string): Promise<Plan> {
     const { start, landing, clearance, launchZone, arrivalHeight } = req
     const { maxZoom, maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
@@ -145,6 +227,7 @@ export class RoutePlanner {
     elevation[startCell] = Math.min(elevation[startCell], startAltitude)
     elevation[target] = Math.min(elevation[target], landingElevation)
 
+    const corridor = Math.min(1500, Math.max(300, 0.1 * straightDistance))
     return {
       key,
       prepared,
@@ -158,34 +241,71 @@ export class RoutePlanner {
         targetElevation: landingElevation,
         arrivalHeight,
       },
+      ctx: { startAltitude, clearance, launchZone, start: startCell, target, targetElevation: landingElevation, arrivalHeight },
       startElevation,
       landingElevation,
       straightDistance,
-      required: null,
+      corridor,
+      keepClear: 1.5 * corridor,
+      found: [],
+      alternativesDone: false,
+      terrainTime: 0,
     }
   }
 }
 
-function toRoute(prepared: PreparedGrid, problem: ArrivalProblem, arrival: Arrival): Route {
-  const { grid, elevationGrid } = prepared
-  const cells = traceRoute(arrival.result, problem.target)
-  const profile = cells.map((cell): ProfilePoint => {
-    const col = cell % grid.cols
-    const row = (cell - col) / grid.cols
-    const distance = arrival.result.distance[cell]
-    const { lng, lat } = cellCenter(grid, col, row)
-    return {
-      distance,
-      terrain: elevationGrid.elevation[cell],
-      altitude: problem.startAltitude - distance / arrival.glideRatio,
-      lng,
-      lat,
-    }
-  })
+/** Grid where the masked cells are impassable. */
+function blockedGrid(grid: ElevationGrid, mask: Uint8Array): ElevationGrid {
+  const elevation = Float32Array.from(grid.elevation)
+  for (let i = 0; i < mask.length; i++) if (mask[i]) elevation[i] = 1e6
+  return { ...grid, elevation }
+}
+
+const toLngLat = (grid: GeoGrid, col: number, row: number): LngLat => ({
+  lng: grid.west + (col + 0.5) * grid.dLng,
+  lat: grid.north - (row + 0.5) * grid.dLat,
+})
+
+const COMPASS = ['North', 'North-east', 'East', 'South-east', 'South', 'South-west', 'West', 'North-west']
+
+/**
+ * Side of the straight line the route lies on, from the average signed offset along
+ * the route (a short wiggle does not decide it); null when the route is direct.
+ */
+export function routeSide(path: PathPoint[], straightDistance: number): { side: string | null; offset: number } {
+  const a = path[0]
+  const b = path[path.length - 1]
+  const m = metersPerDegree((a.lat + b.lat) / 2)
+  const bx = (b.lng - a.lng) * m.lng
+  const by = (b.lat - a.lat) * m.lat
+  const len = Math.hypot(bx, by)
+  let sum = 0
+  for (const p of path) {
+    const px = (p.lng - a.lng) * m.lng
+    const py = (p.lat - a.lat) * m.lat
+    sum += (bx * py - by * px) / len // > 0: left of the straight line
+  }
+  const mean = sum / path.length
+  if (Math.abs(mean) < Math.max(150, 0.03 * straightDistance)) return { side: null, offset: Math.abs(mean) }
+  // Unit normal pointing to the side the route lies on, as a compass bearing.
+  const sign = Math.sign(mean) || 1
+  const east = (-by / len) * sign
+  const north = (bx / len) * sign
+  const bearing = (Math.atan2(east, north) * 180) / Math.PI
+  return { side: COMPASS[Math.round(((bearing + 360) % 360) / 45) % 8], offset: Math.abs(mean) }
+}
+
+function toOption(plan: Plan, c: Candidate, id: number): RouteOption {
+  const { grid } = plan.prepared
+  const vertices = c.geometry.vertices.map(([col, row]) => toLngLat(grid, col, row))
+  const path = c.geometry.samples.map((s) => ({ distance: s.distance, terrain: s.elevation, ...toLngLat(grid, s.col, s.row) }))
   return {
-    glideRatio: arrival.glideRatio,
-    length: arrival.result.distance[problem.target],
-    arrivalAgl: arrival.arrivalAgl,
-    profile,
+    id,
+    ...routeSide(path, plan.straightDistance),
+    requiredGlideRatio: c.required,
+    length: c.geometry.length,
+    vertices,
+    path,
+    shortestWithGlideRatio: c.shortestWithGlideRatio,
   }
 }

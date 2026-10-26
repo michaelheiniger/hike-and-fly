@@ -17,7 +17,9 @@
   }
 
   export interface RouteLine {
+    id: number
     points: LngLat[]
+    selected: boolean
     /** Dashed: a route the pilot's glide ratio does not make. */
     dashed: boolean
   }
@@ -25,22 +27,25 @@
   interface Props {
     start: LngLat | null
     landing: LngLat | null
-    route: RouteLine | null
+    routes: RouteLine[]
     /** Point highlighted from the profile chart. */
     highlight: LngLat | null
     overlay: Overlay | null
     basemap: BasemapId
     onpick: (p: LngLat) => void
+    onselectroute: (id: number) => void
     onmovestart: (p: LngLat) => void
     onmovelanding: (p: LngLat) => void
     onhover: (p: LngLat | null) => void
   }
 
-  let { start, landing, route, highlight, overlay, basemap, onpick, onmovestart, onmovelanding, onhover }: Props = $props()
+  let { start, landing, routes, highlight, overlay, basemap, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
+    $props()
 
   let container: HTMLDivElement
   let map: Map | undefined = $state()
   let loaded = $state(false)
+  let routeBadges: Marker[] = []
   let startMarker: Marker | undefined
   let landingMarker: Marker | undefined
 
@@ -60,10 +65,20 @@
       const empty = { type: 'FeatureCollection' as const, features: [] }
       m.addSource('route', { type: 'geojson', data: empty })
       m.addSource('highlight', { type: 'geojson', data: empty })
+      // Other routes: thin, gray, clickable.
+      m.addLayer({
+        id: 'route-other',
+        type: 'line',
+        source: 'route',
+        filter: ['!=', ['get', 'selected'], true],
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#5f5e5a', 'line-width': 2.5, 'line-opacity': 0.9 },
+      })
       m.addLayer({
         id: 'route-casing',
         type: 'line',
         source: 'route',
+        filter: ['==', ['get', 'selected'], true],
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#ffffff', 'line-width': 6 },
       })
@@ -71,9 +86,20 @@
         id: 'route',
         type: 'line',
         source: 'route',
+        filter: ['all', ['==', ['get', 'selected'], true], ['!=', ['get', 'dashed'], true]],
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#1a1a19', 'line-width': 3 },
       })
+      m.addLayer({
+        id: 'route-dashed',
+        type: 'line',
+        source: 'route',
+        filter: ['all', ['==', ['get', 'selected'], true], ['==', ['get', 'dashed'], true]],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': '#1a1a19', 'line-width': 3, 'line-dasharray': [2, 1.5] },
+      })
+      m.on('mouseenter', 'route-other', () => (m.getCanvas().style.cursor = 'pointer'))
+      m.on('mouseleave', 'route-other', () => (m.getCanvas().style.cursor = ''))
       m.addLayer({
         id: 'highlight',
         type: 'circle',
@@ -82,12 +108,35 @@
       })
       loaded = true
     })
-    m.on('click', (e) => onpick({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
+    m.on('click', (e) => {
+      // A click on another route selects it rather than moving a marker.
+      const box: [[number, number], [number, number]] = [
+        [e.point.x - 4, e.point.y - 4],
+        [e.point.x + 4, e.point.y + 4],
+      ]
+      const hit = m.getLayer('route-other') ? m.queryRenderedFeatures(box, { layers: ['route-other'] })[0] : undefined
+      if (hit) onselectroute(hit.properties.id as number)
+      else onpick({ lng: e.lngLat.lng, lat: e.lngLat.lat })
+    })
     m.on('mousemove', (e) => onhover({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
     m.on('mouseout', () => onhover(null))
     map = m
     return () => m.remove()
   })
+
+  /** Point halfway along a polyline (by vertex distance in degrees: fine for placing a label). */
+  function midpoint(points: LngLat[]): LngLat {
+    const seg = points.slice(1).map((p, i) => Math.hypot(p.lng - points[i].lng, p.lat - points[i].lat))
+    let half = seg.reduce((a, b) => a + b, 0) / 2
+    for (let i = 0; i < seg.length; i++) {
+      if (half <= seg[i]) {
+        const t = seg[i] ? half / seg[i] : 0
+        return { lng: points[i].lng + (points[i + 1].lng - points[i].lng) * t, lat: points[i].lat + (points[i + 1].lat - points[i].lat) * t }
+      }
+      half -= seg[i]
+    }
+    return points[points.length - 1]
+  }
 
   /** Keeps a draggable marker in sync with a point. */
   function syncMarker(marker: Marker | undefined, p: LngLat | null, color: string, onmove: (p: LngLat) => void) {
@@ -115,17 +164,28 @@
 
   $effect(() => {
     if (!map || !loaded) return
-    const features = route
-      ? [
-          {
-            type: 'Feature' as const,
-            properties: {},
-            geometry: { type: 'LineString' as const, coordinates: route.points.map((p) => [p.lng, p.lat]) },
-          },
-        ]
-      : []
+    const features = routes.map((r) => ({
+      type: 'Feature' as const,
+      properties: { id: r.id, selected: r.selected, dashed: r.dashed },
+      geometry: { type: 'LineString' as const, coordinates: r.points.map((p) => [p.lng, p.lat]) },
+    }))
     ;(map.getSource('route') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
-    map.setPaintProperty('route', 'line-dasharray', route?.dashed ? [2, 1.5] : [1, 0])
+
+    // A letter at the middle of each route, matching the route list.
+    for (const badge of routeBadges) badge.remove()
+    routeBadges = routes.map((r) => {
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.className = r.selected ? 'route-badge selected' : 'route-badge'
+      el.textContent = String.fromCharCode(65 + r.id)
+      el.setAttribute('aria-label', `Route ${el.textContent}`)
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        onselectroute(r.id)
+      })
+      const mid = midpoint(r.points)
+      return new Marker({ element: el }).setLngLat([mid.lng, mid.lat]).addTo(map!)
+    })
   })
 
   $effect(() => {
@@ -169,7 +229,7 @@
           source: 'agl',
           paint: { 'raster-opacity': 0.7, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
         },
-        'route-casing',
+        'route-other',
       )
     }
   })
@@ -178,6 +238,26 @@
 <div class="map" bind:this={container}></div>
 
 <style>
+  .map :global(.route-badge) {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    background: #5f5e5a;
+    color: #ffffff;
+    font: 600 12px/1 system-ui, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  }
+
+  .map :global(.route-badge.selected) {
+    background: #1a1a19;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
   .map {
     position: absolute;
     inset: 0;
