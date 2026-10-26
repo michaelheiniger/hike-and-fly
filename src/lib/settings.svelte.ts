@@ -1,0 +1,79 @@
+import type { HeightMode } from './compute/reach'
+import type { LngLat } from './terrain/geo'
+
+export interface Settings {
+  start: LngLat | null
+  startHeight: number
+  startHeightMode: HeightMode
+  glideRatio: number
+  clearance: number
+  launchZone: number
+}
+
+export const DEFAULTS: Omit<Settings, 'start'> = {
+  startHeight: 0,
+  startHeightMode: 'agl',
+  glideRatio: 7,
+  clearance: 100,
+  launchZone: 500,
+}
+
+/** What each assumption means, shown next to it in the panel. */
+export const EXPLANATIONS = {
+  startHeight:
+    'Height at the start. 0 m AGL is a ground launch. Use a higher value to plan a final glide after climbing in a thermal.',
+  glideRatio:
+    'Still-air glide ratio. 7 is realistic for a light hike & fly wing at trim — below the brochure value, which assumes perfect conditions.',
+  clearance:
+    'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (red) are reachable as a final glide only.',
+  launchZone:
+    'After the start, the clearance ramps up from 0 to its full value over this distance — otherwise no ground launch would be possible.',
+  wind: 'Not modelled yet: computations assume still air. Headwind and sink shrink the reachable area.',
+} as const
+
+/** Limits for inputs and URL values. */
+export const LIMITS = {
+  startHeight: [-500, 9000],
+  glideRatio: [1, 20],
+  clearance: [0, 1000],
+  launchZone: [0, 5000],
+} as const
+
+const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, v))
+
+function readUrl(): Settings {
+  const p = new URLSearchParams(location.hash.slice(1))
+  const num = (key: string, fallback: number, limits: readonly [number, number]) => {
+    const v = Number(p.get(key))
+    return p.has(key) && Number.isFinite(v) ? clamp(v, limits) : fallback
+  }
+  const lat = Number(p.get('lat'))
+  const lng = Number(p.get('lng'))
+  const hasStart = p.has('lat') && p.has('lng') && Math.abs(lat) <= 85 && Math.abs(lng) <= 180
+  return {
+    start: hasStart ? { lat, lng } : null,
+    startHeight: num('h', DEFAULTS.startHeight, LIMITS.startHeight),
+    startHeightMode: p.get('hm') === 'amsl' ? 'amsl' : 'agl',
+    glideRatio: num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio),
+    clearance: num('cl', DEFAULTS.clearance, LIMITS.clearance),
+    launchZone: num('lz', DEFAULTS.launchZone, LIMITS.launchZone),
+  }
+}
+
+export function writeUrl(s: Settings): void {
+  const p = new URLSearchParams()
+  if (s.start) {
+    p.set('lat', s.start.lat.toFixed(5))
+    p.set('lng', s.start.lng.toFixed(5))
+  }
+  if (s.startHeight !== DEFAULTS.startHeight || s.startHeightMode !== DEFAULTS.startHeightMode) {
+    p.set('h', `${s.startHeight}`)
+    p.set('hm', s.startHeightMode)
+  }
+  if (s.glideRatio !== DEFAULTS.glideRatio) p.set('gr', `${s.glideRatio}`)
+  if (s.clearance !== DEFAULTS.clearance) p.set('cl', `${s.clearance}`)
+  if (s.launchZone !== DEFAULTS.launchZone) p.set('lz', `${s.launchZone}`)
+  history.replaceState(null, '', `#${p}`)
+}
+
+export const settings: Settings = $state(readUrl())
