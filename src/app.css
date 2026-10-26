@@ -6,8 +6,11 @@
   --accent: #6250d6;
   --on-accent: #ffffff;
   --critical: #d03b3b;
+  --good: #0ca30c;
   --warning-text: #9a6700;
   --shadow: 0 2px 12px rgb(0 0 0 / 0.18);
+  --terrain: #d9d6cc;
+  --terrain-line: #8c897e;
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
@@ -25,8 +28,11 @@
     --accent: #9085e9;
     --on-accent: #111110;
     --critical: #f07070;
+    --good: #0ca30c;
     --warning-text: #fab219;
     --shadow: 0 2px 12px rgb(0 0 0 / 0.5);
+    --terrain: #3a3935;
+    --terrain-line: #8c897e;
   }
 }
 

@@ -30,7 +30,7 @@
   }
 
   /** Number input handler that ignores incomplete values and clamps to limits. */
-  function numberInput(key: 'startHeight' | 'glideRatio' | 'clearance' | 'launchZone') {
+  function numberInput(key: keyof typeof LIMITS) {
     return (e: Event) => {
       const v = (e.currentTarget as HTMLInputElement).valueAsNumber
       if (!Number.isFinite(v)) return
@@ -163,6 +163,22 @@
   </label>
   <p class="explain">{EXPLANATIONS.launchZone}</p>
 
+  <label class="field">
+    <span class="label">Arrival height {#if isDefault('arrivalHeight')}<em>default</em>{/if}</span>
+    <span class="inputs">
+      <input
+        type="number"
+        step="10"
+        min={LIMITS.arrivalHeight[0]}
+        max={LIMITS.arrivalHeight[1]}
+        value={settings.arrivalHeight}
+        onchange={numberInput('arrivalHeight')}
+      />
+      <span class="unit">m</span>
+    </span>
+  </label>
+  <p class="explain">{EXPLANATIONS.arrivalHeight}</p>
+
   <div class="field">
     <span class="label">Wind</span>
     <span class="value warning">Still air</span>
@@ -185,6 +201,7 @@
       settings.glideRatio = DEFAULTS.glideRatio
       settings.clearance = DEFAULTS.clearance
       settings.launchZone = DEFAULTS.launchZone
+      settings.arrivalHeight = DEFAULTS.arrivalHeight
     }}>Reset to defaults</button
   >
 </section>

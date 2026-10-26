@@ -1,10 +1,11 @@
 import type { ReachRequest, ReachResult } from './reach'
+import type { RouteRequest, RouteResult } from './route'
 
-export interface WorkerRequest {
-  id: number
-  request: ReachRequest
-}
+export type WorkerRequest =
+  | { id: number; kind: 'reach'; request: ReachRequest }
+  | { id: number; kind: 'route'; request: RouteRequest }
 
 export type WorkerResponse =
-  | { id: number; type: 'result'; result: ReachResult; png: Blob }
-  | { id: number; type: 'error'; message: string }
+  | { id: number; kind: 'reach'; type: 'result'; result: ReachResult; png: Blob }
+  | { id: number; kind: 'route'; type: 'result'; result: RouteResult }
+  | { id: number; kind: WorkerRequest['kind']; type: 'error'; message: string }

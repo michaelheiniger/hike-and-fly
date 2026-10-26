@@ -1,53 +1,79 @@
 import type { WorkerRequest, WorkerResponse } from './protocol'
 import type { ReachRequest, ReachResult } from './reach'
+import type { RouteRequest, RouteResult } from './route'
 
 export type ReachOutcome = { result: ReachResult; png: Blob } | { error: string }
+export type RouteOutcome = { result: RouteResult } | { error: string }
+
+type Kind = WorkerRequest['kind']
+type Pending = { kind: 'reach'; request: ReachRequest } | { kind: 'route'; request: RouteRequest }
+
+export interface PlannerCallbacks {
+  onReach: (outcome: ReachOutcome, request: ReachRequest) => void
+  onRoute: (outcome: RouteOutcome, request: RouteRequest) => void
+  /** Called whenever the set of busy kinds changes. */
+  onBusy?: (busy: Record<Kind, boolean>) => void
+}
 
 /**
- * Runs reach computations in a worker, one at a time. A search cannot be
- * interrupted, so while one runs only the latest new request is kept.
+ * Runs computations in a worker, one at a time. A search cannot be interrupted,
+ * so while one runs only the latest new request of each kind is kept.
  */
-export class ReachClient {
-  private worker = new Worker(new URL('./reach.worker.ts', import.meta.url), { type: 'module' })
+export class PlannerClient {
+  private worker = new Worker(new URL('./planner.worker.ts', import.meta.url), { type: 'module' })
   private nextId = 1
-  private running = false
-  private queued: ReachRequest | null = null
-  private onOutcome: (outcome: ReachOutcome, request: ReachRequest) => void
-  private current: ReachRequest | null = null
+  private current: Pending | null = null
+  private queued = new Map<Kind, Pending>()
+  private callbacks: PlannerCallbacks
 
-  constructor(onOutcome: (outcome: ReachOutcome, request: ReachRequest) => void) {
-    this.onOutcome = onOutcome
-    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      const message = event.data
-      const request = this.current!
-      this.running = false
-      if (this.queued) {
-        const next = this.queued
-        this.queued = null
-        this.send(next)
-      }
-      this.onOutcome(message.type === 'result' ? { result: message.result, png: message.png } : { error: message.message }, request)
-    }
+  constructor(callbacks: PlannerCallbacks) {
+    this.callbacks = callbacks
+    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => this.receive(event.data)
   }
 
-  get busy(): boolean {
-    return this.running
+  reach(request: ReachRequest): void {
+    this.enqueue({ kind: 'reach', request })
   }
 
-  request(request: ReachRequest): void {
-    if (this.running) this.queued = request
-    else this.send(request)
-  }
-
-  private send(request: ReachRequest): void {
-    this.running = true
-    this.current = request
-    // Callers pass plain objects (e.g. `$state.snapshot`): reactive proxies cannot be cloned.
-    const message: WorkerRequest = { id: this.nextId++, request }
-    this.worker.postMessage(message)
+  route(request: RouteRequest): void {
+    this.enqueue({ kind: 'route', request })
   }
 
   dispose(): void {
     this.worker.terminate()
+  }
+
+  private enqueue(pending: Pending): void {
+    this.queued.set(pending.kind, pending)
+    if (!this.current) this.sendNext()
+    this.notifyBusy()
+  }
+
+  private sendNext(): void {
+    const next = this.queued.values().next().value
+    if (!next) return
+    this.queued.delete(next.kind)
+    this.current = next
+    // Callers pass plain objects (e.g. `$state.snapshot`): reactive proxies cannot be cloned.
+    this.worker.postMessage({ id: this.nextId++, ...next } satisfies WorkerRequest)
+  }
+
+  private receive(message: WorkerResponse): void {
+    const done = this.current!
+    this.current = null
+    this.sendNext()
+    if (done.kind === 'reach' && message.kind === 'reach') {
+      this.callbacks.onReach(message.type === 'result' ? { result: message.result, png: message.png } : { error: message.message }, done.request)
+    } else if (done.kind === 'route' && message.kind === 'route') {
+      this.callbacks.onRoute(message.type === 'result' ? { result: message.result } : { error: message.message }, done.request)
+    }
+    this.notifyBusy()
+  }
+
+  private notifyBusy(): void {
+    const busy = { reach: false, route: false }
+    if (this.current) busy[this.current.kind] = true
+    for (const kind of this.queued.keys()) busy[kind] = true
+    this.callbacks.onBusy?.(busy)
   }
 }

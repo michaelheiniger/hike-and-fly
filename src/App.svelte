@@ -1,96 +1,214 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import MapView, { type Overlay } from './components/MapView.svelte'
+  import MapView, { type Overlay, type RouteLine } from './components/MapView.svelte'
   import AssumptionsPanel from './components/AssumptionsPanel.svelte'
   import Legend from './components/Legend.svelte'
-  import { ReachClient } from './lib/compute/client'
+  import Profile from './components/Profile.svelte'
+  import RouteSummary from './components/RouteSummary.svelte'
+  import { PlannerClient } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
+  import type { RouteRequest, RouteResult } from './lib/compute/route'
   import type { BasemapId } from './lib/map/style'
   import { aglBands } from './lib/render/agl'
   import { settings, writeUrl } from './lib/settings.svelte'
   import { cellAt, gridBounds, type LngLat } from './lib/terrain/geo'
 
   let basemap: BasemapId = $state('swisstopo')
-  let overlay = $state<Overlay | null>(null)
-  let result = $state.raw<ReachResult | null>(null)
-  let resultRequest = $state.raw<ReachRequest | null>(null)
-  let error = $state<string | null>(null)
-  let computing = $state(false)
-  let hover = $state<LngLat | null>(null)
+  let clickSets: 'start' | 'landing' = $state(settings.start && !settings.landing ? 'landing' : 'start')
 
-  const client = new ReachClient((outcome, request) => {
-    computing = client.busy
-    if ('error' in outcome) {
-      error = outcome.error
-      return
-    }
-    error = null
-    result = outcome.result
-    resultRequest = request
-    const previous = overlay?.url
-    overlay = { url: URL.createObjectURL(outcome.png), ...gridBounds(outcome.result.grid) }
-    // Give the map time to load the new image before releasing the old one.
-    if (previous) setTimeout(() => URL.revokeObjectURL(previous), 5000)
+  let overlay = $state<Overlay | null>(null)
+  let reach = $state.raw<ReachResult | null>(null)
+  let reachRequest = $state.raw<ReachRequest | null>(null)
+  let reachError = $state<string | null>(null)
+
+  let route = $state.raw<RouteResult | null>(null)
+  let routeRequest = $state.raw<RouteRequest | null>(null)
+  let routeError = $state<string | null>(null)
+
+  let busy = $state({ reach: false, route: false })
+
+  // Narrow screens show the profile inside the panel rather than over the map.
+  const narrowQuery = matchMedia('(max-width: 640px)')
+  let narrow = $state(narrowQuery.matches)
+  narrowQuery.addEventListener('change', (e) => (narrow = e.matches))
+  let hover = $state<LngLat | null>(null)
+  let highlight = $state<LngLat | null>(null)
+
+  const client = new PlannerClient({
+    onReach(outcome, request) {
+      if ('error' in outcome) {
+        reachError = outcome.error
+        return
+      }
+      reachError = null
+      reach = outcome.result
+      reachRequest = request
+      const previous = overlay?.url
+      overlay = { url: URL.createObjectURL(outcome.png), ...gridBounds(outcome.result.grid) }
+      // Give the map time to load the new image before releasing the old one.
+      if (previous) setTimeout(() => URL.revokeObjectURL(previous), 5000)
+    },
+    onRoute(outcome, request) {
+      if ('error' in outcome) {
+        routeError = outcome.error
+        route = null
+        return
+      }
+      routeError = null
+      route = outcome.result
+      routeRequest = request
+    },
+    onBusy: (b) => (busy = b),
   })
   onDestroy(() => client.dispose())
 
   // Recompute (debounced) whenever an input changes, and keep the URL in sync.
   $effect(() => {
-    const snapshot = $state.snapshot(settings)
-    writeUrl(snapshot)
-    const { start, ...rest } = snapshot
+    const s = $state.snapshot(settings)
+    writeUrl(s)
+    const { start, landing } = s
     if (!start) return
+    const reachReq: ReachRequest = {
+      start,
+      startHeight: s.startHeight,
+      startHeightMode: s.startHeightMode,
+      glideRatio: s.glideRatio,
+      clearance: s.clearance,
+      launchZone: s.launchZone,
+    }
     const timer = setTimeout(() => {
-      client.request({ start, ...rest })
-      computing = true
+      client.reach(reachReq)
+      if (landing) client.route({ ...reachReq, landing, arrivalHeight: s.arrivalHeight })
     }, 150)
     return () => clearTimeout(timer)
   })
 
-  const bands = $derived(aglBands(resultRequest?.clearance ?? settings.clearance))
+  $effect(() => {
+    if (!settings.landing) {
+      route = null
+      routeError = null
+    }
+  })
+
+  const bands = $derived(aglBands(reachRequest?.clearance ?? settings.clearance))
+
+  /** Route shown on the map and in the profile: the pilot's if it reaches, else the required one. */
+  const shownRoute = $derived(route && settings.landing ? (route.withGlideRatio ?? route.required) : null)
+  const routeLine: RouteLine | null = $derived(
+    shownRoute ? { points: shownRoute.profile, dashed: shownRoute === route?.required && !route?.withGlideRatio } : null,
+  )
+
+  // A highlighted point belongs to the route it was hovered on.
+  $effect(() => {
+    void shownRoute
+    highlight = null
+  })
 
   /** Readout under the cursor: AGL, altitude and distance flown. */
   const readout = $derived.by(() => {
-    if (!hover || !result || !resultRequest) return null
-    const cell = cellAt(result.grid, hover)
+    if (!hover || !reach || !reachRequest) return null
+    const cell = cellAt(reach.grid, hover)
     if (!cell) return null
-    const i = cell.row * result.grid.cols + cell.col
-    const d = result.distance[i]
+    const i = cell.row * reach.grid.cols + cell.col
+    const d = reach.distance[i]
     if (d === Infinity) return { reachable: false as const }
     return {
       reachable: true as const,
-      agl: result.agl[i],
-      altitude: result.startAltitude - d / resultRequest.glideRatio,
+      agl: reach.agl[i],
+      altitude: reach.startAltitude - d / reachRequest.glideRatio,
       distance: d,
     }
   })
 
   function pick(p: LngLat) {
-    settings.start = p
+    if (clickSets === 'landing') {
+      settings.landing = p
+    } else {
+      settings.start = p
+      if (!settings.landing) clickSets = 'landing'
+    }
   }
 </script>
 
+{#snippet profile(className: string)}
+  {#if shownRoute && route && routeRequest}
+    <div class={className}>
+      <Profile
+        route={shownRoute}
+        isRequired={!route.withGlideRatio}
+        landingElevation={route.landingElevation}
+        arrivalHeight={routeRequest.arrivalHeight}
+        clearance={routeRequest.clearance}
+        launchZone={routeRequest.launchZone}
+        onhover={(p) => (highlight = p)}
+      />
+    </div>
+  {/if}
+{/snippet}
+
 <main>
-  <MapView start={settings.start} {overlay} {basemap} onpick={pick} onhover={(p) => (hover = p)} />
+  <MapView
+    start={settings.start}
+    landing={settings.landing}
+    route={routeLine}
+    {highlight}
+    {overlay}
+    {basemap}
+    onpick={pick}
+    onmovestart={(p) => (settings.start = p)}
+    onmovelanding={(p) => (settings.landing = p)}
+    onhover={(p) => (hover = p)}
+  />
 
   <aside class="panel">
     <header>
       <h1>Hike &amp; Fly Planner</h1>
-      {#if !settings.start}
+      {#if settings.start}
+        <div class="click-mode">
+          <span>Click on the map sets</span>
+          <span class="segmented" role="group" aria-label="Click on the map sets">
+            <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>Start</button>
+            <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>Landing</button>
+          </span>
+        </div>
+      {:else}
         <p class="hint">Click the map to set the start.</p>
       {/if}
     </header>
 
-    <AssumptionsPanel {result} {computing} {error} bind:basemap>
+    {#if settings.landing}
+      <RouteSummary
+        result={route}
+        computing={busy.route}
+        error={routeError}
+        glideRatio={routeRequest?.glideRatio ?? settings.glideRatio}
+        arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
+        onclear={() => {
+          settings.landing = null
+          clickSets = 'landing'
+        }}
+      />
+      {#if narrow}
+        {@render profile('profile-inline')}
+      {/if}
+    {:else if settings.start}
+      <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
+    {/if}
+
+    <AssumptionsPanel result={reach} computing={busy.reach} error={reachError} bind:basemap>
       {#snippet legend()}
-        {#if result}
+        {#if reach}
           <Legend {bands} />
         {/if}
       {/snippet}
     </AssumptionsPanel>
   </aside>
 
-  {#if readout}
+  {#if !narrow}
+    {@render profile('profile-card')}
+  {/if}
+
+  {#if readout && !shownRoute}
     <div class="readout" role="status">
       {#if readout.reachable}
         <strong>{Math.round(readout.agl)} m AGL</strong>
@@ -136,6 +254,47 @@
     color: var(--text-muted);
   }
 
+  .click-mode {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--text-muted);
+  }
+
+  .segmented {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .segmented button {
+    border: 0;
+    border-radius: 0;
+    padding: 4px 10px;
+    background: transparent;
+    color: var(--text);
+  }
+
+  .segmented button[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .profile-card {
+    position: absolute;
+    left: 344px;
+    right: 60px;
+    bottom: 32px;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 10px 14px 6px;
+  }
+
   .readout {
     position: absolute;
     bottom: 36px;
@@ -178,5 +337,6 @@
     .readout {
       display: none;
     }
+
   }
 </style>

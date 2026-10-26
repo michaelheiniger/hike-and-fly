@@ -41,6 +41,23 @@ any g' > g), so the minimum GR is found by **binary search**, running the search
 candidate (~10 runs for 0.05 precision). If the straight line is clear, the result equals
 `distance / (h_start − h_landing − arrival_height)`.
 
+Implementation notes:
+
+- The route search uses its own grid, centered between start and landing with room for
+  detours (≤ 1 M cells, as it runs ~10 times). Each run stops once the landing is settled.
+- Start and landing cells use their true elevation; the rest of the grid keeps the max.
+- The required GR is rounded up to 0.1 (conservative), and the grid's distance overestimate
+  (≤ ~3–5 %) also errs on the safe side.
+- Terrain and required GR are cached per (start, landing, assumptions): moving the GR slider
+  only reruns one search for the pilot's own route.
+- Two routes exist: the one at the required GR (it may detour around a ridge) and the one
+  flown with the pilot's GR (which may cross it). The map and profile show the pilot's route
+  when it reaches the landing, otherwise the required one, dashed.
+- The arrival can exceed the arrival height at the required GR: the limiting point may be a
+  ridge en route (the glide path touches the clearance line in the profile).
+- Known limitation: grid routes can bend where the straight line is clear (several cell paths
+  have the same length). Any-angle search or line-of-sight smoothing will fix the display.
+
 ### Alternative routes (milestone 3)
 
 Routes passing on different sides of a mountain: find the best route, penalize/block its

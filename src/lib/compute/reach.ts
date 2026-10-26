@@ -1,8 +1,15 @@
 import { computeAgl, searchGlide } from '../glide/search'
-import { cellMetrics, makeGeoGrid, zoomForCellSize, type GeoGrid, type LngLat } from '../terrain/geo'
-import { sampleBilinear, sampleGrid, tilesCovering, type TileSet } from '../terrain/terrarium'
-
-export type HeightMode = 'agl' | 'amsl'
+import type { GeoGrid, LngLat } from '../terrain/geo'
+import {
+  DEFAULT_MAX_RADIUS,
+  groundElevation,
+  loadElevationGrid,
+  lowestTerrain,
+  startAltitudeFrom,
+  type GridOptions,
+  type HeightMode,
+  type LoadTiles,
+} from './terrain'
 
 export interface ReachRequest {
   start: LngLat
@@ -31,62 +38,25 @@ export interface ReachResult {
   timings: { terrain: number; search: number }
 }
 
-export type LoadTiles = (z: number, coords: [number, number][]) => Promise<TileSet>
-
-export interface ReachOptions {
-  maxZoom: number
-  /** Cell budget for the search grid. */
-  maxCells?: number
-  /** Finest cell size in meters. */
-  minCellSize?: number
-  /** Largest search radius in meters. */
-  maxRadius?: number
-}
-
-export class ReachError extends Error {}
-
-const SQUARE_DEGREES = (radius: number, center: LngLat) => {
-  // Bounding box of a square grid of `radius` around center, generously rounded.
-  const dLat = radius / 111_000
-  const dLng = radius / (111_000 * Math.cos((center.lat * Math.PI) / 180))
-  return { north: center.lat + dLat, south: center.lat - dLat, west: center.lng - dLng, east: center.lng + dLng }
-}
-
 /** Computes the area reachable from the start, with AGL over every cell. */
-export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, options: ReachOptions): Promise<ReachResult> {
+export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, options: GridOptions): Promise<ReachResult> {
   const { start, glideRatio, clearance, launchZone } = req
-  const { maxZoom, maxCells = 2_250_000, minCellSize = 10, maxRadius = 60_000 } = options
+  const { maxZoom, maxRadius = DEFAULT_MAX_RADIUS } = options
   const t0 = performance.now()
 
-  // True ground elevation at the start.
-  const fineZoom = Math.min(maxZoom, 14)
-  const startTiles = await loadTiles(fineZoom, tilesCovering(fineZoom, start.lat, start.lat, start.lng, start.lng))
-  const startElevation = sampleBilinear(startTiles, fineZoom, start.lng, start.lat)
-  const startAltitude = req.startHeightMode === 'agl' ? startElevation + req.startHeight : req.startHeight
-  if (startAltitude < startElevation - 0.5) {
-    throw new ReachError(`Start altitude ${Math.round(startAltitude)} m is below the ground (${Math.round(startElevation)} m).`)
-  }
+  const startElevation = await groundElevation(start, loadTiles, maxZoom)
+  const startAltitude = startAltitudeFrom(req.startHeight, req.startHeightMode, startElevation)
 
   // Size the search area from the lowest terrain within the largest possible range.
   const upperRadius = Math.min(maxRadius, Math.max(startAltitude, 1000) * glideRatio)
-  const coarseZoom = zoomForCellSize(upperRadius / 64, start.lat, maxZoom)
-  const box = SQUARE_DEGREES(upperRadius, start)
-  const coarse = await loadTiles(coarseZoom, tilesCovering(coarseZoom, box.north, box.south, box.west, box.east))
-  let lowest = Infinity
-  for (const tile of coarse.values()) for (const v of tile) if (v < lowest) lowest = v
+  const lowest = await lowestTerrain(start, upperRadius, loadTiles, maxZoom)
   const radius = Math.min(maxRadius, Math.max(0, startAltitude - lowest) * glideRatio * 1.05 + 500)
 
-  const cellSize = Math.max(minCellSize, (2 * radius) / Math.sqrt(maxCells))
-  const zoom = zoomForCellSize(cellSize, start.lat, maxZoom)
-  const grid = makeGeoGrid(start, radius, cellSize)
-  const bounds = SQUARE_DEGREES(radius + 2 * cellSize, start)
-  const tiles = await loadTiles(zoom, tilesCovering(zoom, bounds.north, bounds.south, bounds.west, bounds.east))
-  const elevation = sampleGrid(tiles, zoom, grid, start, launchZone)
-  const { cellHeight, rowCellWidth } = cellMetrics(grid)
+  const { grid, elevationGrid, cellSize, zoom } = await loadElevationGrid(start, radius, start, launchZone, loadTiles, options)
   const t1 = performance.now()
 
   const center = (grid.cols - 1) / 2
-  const elevationGrid = { cols: grid.cols, rows: grid.rows, elevation, cellHeight, rowCellWidth }
+  const { elevation } = elevationGrid
   // The start cell holds the true elevation, which a ground launch is exactly at.
   elevation[center * grid.cols + center] = Math.min(elevation[center * grid.cols + center], startAltitude)
   const result = searchGlide(elevationGrid, {

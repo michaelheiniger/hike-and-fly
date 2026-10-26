@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Map, Marker, NavigationControl, ScaleControl, setWorkerUrl, type ImageSource } from 'maplibre-gl'
+  import { Map, Marker, NavigationControl, ScaleControl, setWorkerUrl, type GeoJSONSource, type ImageSource } from 'maplibre-gl'
   import 'maplibre-gl/dist/maplibre-gl.css'
   // MapLibre locates its worker relative to its own module, which breaks once Vite bundles it.
   import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
@@ -16,20 +16,33 @@
     east: number
   }
 
+  export interface RouteLine {
+    points: LngLat[]
+    /** Dashed: a route the pilot's glide ratio does not make. */
+    dashed: boolean
+  }
+
   interface Props {
     start: LngLat | null
+    landing: LngLat | null
+    route: RouteLine | null
+    /** Point highlighted from the profile chart. */
+    highlight: LngLat | null
     overlay: Overlay | null
     basemap: BasemapId
     onpick: (p: LngLat) => void
+    onmovestart: (p: LngLat) => void
+    onmovelanding: (p: LngLat) => void
     onhover: (p: LngLat | null) => void
   }
 
-  let { start, overlay, basemap, onpick, onhover }: Props = $props()
+  let { start, landing, route, highlight, overlay, basemap, onpick, onmovestart, onmovelanding, onhover }: Props = $props()
 
   let container: HTMLDivElement
   let map: Map | undefined = $state()
   let loaded = $state(false)
-  let marker: Marker | undefined
+  let startMarker: Marker | undefined
+  let landingMarker: Marker | undefined
 
   onMount(() => {
     setWorkerUrl(maplibreWorkerUrl)
@@ -42,8 +55,33 @@
       attributionControl: { compact: true, customAttribution: AWS_TERRARIUM.attribution },
     })
     m.addControl(new NavigationControl({ showCompass: false }), 'top-right')
-    m.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right')
-    m.on('load', () => (loaded = true))
+    m.addControl(new ScaleControl({ unit: 'metric' }), 'top-right')
+    m.on('load', () => {
+      const empty = { type: 'FeatureCollection' as const, features: [] }
+      m.addSource('route', { type: 'geojson', data: empty })
+      m.addSource('highlight', { type: 'geojson', data: empty })
+      m.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#ffffff', 'line-width': 6 },
+      })
+      m.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#1a1a19', 'line-width': 3 },
+      })
+      m.addLayer({
+        id: 'highlight',
+        type: 'circle',
+        source: 'highlight',
+        paint: { 'circle-radius': 6, 'circle-color': '#6250d6', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
+      })
+      loaded = true
+    })
     m.on('click', (e) => onpick({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
     m.on('mousemove', (e) => onhover({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
     m.on('mouseout', () => onhover(null))
@@ -51,23 +89,51 @@
     return () => m.remove()
   })
 
-  // Start marker, draggable to move the start.
-  $effect(() => {
-    if (!map) return
-    if (!start) {
+  /** Keeps a draggable marker in sync with a point. */
+  function syncMarker(marker: Marker | undefined, p: LngLat | null, color: string, onmove: (p: LngLat) => void) {
+    if (!map) return marker
+    if (!p) {
       marker?.remove()
-      marker = undefined
-      return
+      return undefined
     }
-    if (!marker) {
-      marker = new Marker({ color: '#1a1a19', draggable: true }).setLngLat([start.lng, start.lat]).addTo(map)
-      marker.on('dragend', () => {
-        const p = marker!.getLngLat()
-        onpick({ lng: p.lng, lat: p.lat })
-      })
-    } else {
-      marker.setLngLat([start.lng, start.lat])
-    }
+    if (marker) return marker.setLngLat([p.lng, p.lat])
+    const created = new Marker({ color, draggable: true }).setLngLat([p.lng, p.lat]).addTo(map)
+    created.on('dragend', () => {
+      const q = created.getLngLat()
+      onmove({ lng: q.lng, lat: q.lat })
+    })
+    return created
+  }
+
+  $effect(() => {
+    startMarker = syncMarker(startMarker, start, '#1a1a19', onmovestart)
+  })
+
+  $effect(() => {
+    landingMarker = syncMarker(landingMarker, landing, '#2a78d6', onmovelanding)
+  })
+
+  $effect(() => {
+    if (!map || !loaded) return
+    const features = route
+      ? [
+          {
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'LineString' as const, coordinates: route.points.map((p) => [p.lng, p.lat]) },
+          },
+        ]
+      : []
+    ;(map.getSource('route') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
+    map.setPaintProperty('route', 'line-dasharray', route?.dashed ? [2, 1.5] : [1, 0])
+  })
+
+  $effect(() => {
+    if (!map || !loaded) return
+    const features = highlight
+      ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: [highlight.lng, highlight.lat] } }]
+      : []
+    ;(map.getSource('highlight') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
   })
 
   $effect(() => {
@@ -96,12 +162,15 @@
       source.updateImage({ url: overlay.url, coordinates })
     } else {
       map.addSource('agl', { type: 'image', url: overlay.url, coordinates })
-      map.addLayer({
-        id: 'agl',
-        type: 'raster',
-        source: 'agl',
-        paint: { 'raster-opacity': 0.6, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
-      })
+      map.addLayer(
+        {
+          id: 'agl',
+          type: 'raster',
+          source: 'agl',
+          paint: { 'raster-opacity': 0.6, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
+        },
+        'route-casing',
+      )
     }
   })
 </script>

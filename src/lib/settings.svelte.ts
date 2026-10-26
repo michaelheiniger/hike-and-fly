@@ -1,21 +1,24 @@
-import type { HeightMode } from './compute/reach'
+import type { HeightMode } from './compute/terrain'
 import type { LngLat } from './terrain/geo'
 
 export interface Settings {
   start: LngLat | null
+  landing: LngLat | null
   startHeight: number
   startHeightMode: HeightMode
   glideRatio: number
   clearance: number
   launchZone: number
+  arrivalHeight: number
 }
 
-export const DEFAULTS: Omit<Settings, 'start'> = {
+export const DEFAULTS: Omit<Settings, 'start' | 'landing'> = {
   startHeight: 0,
   startHeightMode: 'agl',
   glideRatio: 7,
   clearance: 100,
   launchZone: 500,
+  arrivalHeight: 100,
 }
 
 /** What each assumption means, shown next to it in the panel. */
@@ -28,6 +31,8 @@ export const EXPLANATIONS = {
     'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (red) are reachable as a final glide only.',
   launchZone:
     'After the start, the clearance ramps up from 0 to its full value over this distance — otherwise no ground launch would be possible.',
+  arrivalHeight:
+    'Height above the landing when arriving, for the landing pattern. The required glide ratio includes it.',
   wind: 'Not modelled yet: computations assume still air. Headwind and sink shrink the reachable area.',
 } as const
 
@@ -37,6 +42,7 @@ export const LIMITS = {
   glideRatio: [1, 20],
   clearance: [0, 1000],
   launchZone: [0, 5000],
+  arrivalHeight: [0, 1000],
 } as const
 
 const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, v))
@@ -47,16 +53,21 @@ function readUrl(): Settings {
     const v = Number(p.get(key))
     return p.has(key) && Number.isFinite(v) ? clamp(v, limits) : fallback
   }
-  const lat = Number(p.get('lat'))
-  const lng = Number(p.get('lng'))
-  const hasStart = p.has('lat') && p.has('lng') && Math.abs(lat) <= 85 && Math.abs(lng) <= 180
+  const point = (latKey: string, lngKey: string): LngLat | null => {
+    const lat = Number(p.get(latKey))
+    const lng = Number(p.get(lngKey))
+    const valid = p.has(latKey) && p.has(lngKey) && Math.abs(lat) <= 85 && Math.abs(lng) <= 180
+    return valid ? { lat, lng } : null
+  }
   return {
-    start: hasStart ? { lat, lng } : null,
+    start: point('lat', 'lng'),
+    landing: point('llat', 'llng'),
     startHeight: num('h', DEFAULTS.startHeight, LIMITS.startHeight),
     startHeightMode: p.get('hm') === 'amsl' ? 'amsl' : 'agl',
     glideRatio: num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio),
     clearance: num('cl', DEFAULTS.clearance, LIMITS.clearance),
     launchZone: num('lz', DEFAULTS.launchZone, LIMITS.launchZone),
+    arrivalHeight: num('ar', DEFAULTS.arrivalHeight, LIMITS.arrivalHeight),
   }
 }
 
@@ -66,6 +77,10 @@ export function writeUrl(s: Settings): void {
     p.set('lat', s.start.lat.toFixed(5))
     p.set('lng', s.start.lng.toFixed(5))
   }
+  if (s.landing) {
+    p.set('llat', s.landing.lat.toFixed(5))
+    p.set('llng', s.landing.lng.toFixed(5))
+  }
   if (s.startHeight !== DEFAULTS.startHeight || s.startHeightMode !== DEFAULTS.startHeightMode) {
     p.set('h', `${s.startHeight}`)
     p.set('hm', s.startHeightMode)
@@ -73,6 +88,7 @@ export function writeUrl(s: Settings): void {
   if (s.glideRatio !== DEFAULTS.glideRatio) p.set('gr', `${s.glideRatio}`)
   if (s.clearance !== DEFAULTS.clearance) p.set('cl', `${s.clearance}`)
   if (s.launchZone !== DEFAULTS.launchZone) p.set('lz', `${s.launchZone}`)
+  if (s.arrivalHeight !== DEFAULTS.arrivalHeight) p.set('ar', `${s.arrivalHeight}`)
   history.replaceState(null, '', `#${p}`)
 }
 
