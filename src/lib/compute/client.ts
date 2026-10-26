@@ -2,7 +2,7 @@ import type { WorkerRequest, WorkerResponse } from './protocol'
 import type { ReachRequest, ReachResult } from './reach'
 import type { RouteRequest, RouteResult } from './route'
 
-export type ReachOutcome = { result: ReachResult } | { error: string }
+export type ReachOutcome = { result: ReachResult; elevationSource: string } | { error: string }
 export type RouteOutcome = { result: RouteResult } | { error: string }
 
 type Kind = WorkerRequest['kind']
@@ -68,7 +68,9 @@ export class PlannerClient {
     this.current = null
     this.sendNext()
     if (done.kind === 'reach' && message.kind === 'reach') {
-      this.callbacks.onReach(message.type === 'result' ? { result: message.result } : { error: message.message }, done.request)
+      this.callbacks.onReach(message.type === 'result' ? { result: message.result, elevationSource: message.elevationSource } : { error: message.message },
+        done.request,
+      )
     } else if (done.kind !== 'reach' && message.kind !== 'reach') {
       const superseded = this.queued.has('route')
       if (message.type === 'result') {

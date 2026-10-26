@@ -197,7 +197,7 @@ export class RoutePlanner {
 
   private async prepare(req: RouteRequest, key: string): Promise<Plan> {
     const { start, landing, clearance, launchZone, arrivalHeight } = req
-    const { maxZoom, maxRadius = DEFAULT_MAX_RADIUS } = this.options
+    const { maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
     const straightDistance = localDistance(start, landing)
     if (straightDistance < 50) throw new PlanError('The landing is too close to the start.')
@@ -205,8 +205,8 @@ export class RoutePlanner {
       throw new PlanError(`The landing is ${Math.round(straightDistance / 1000)} km away: too far to plan.`)
     }
     const [startElevation, landingElevation] = await Promise.all([
-      groundElevation(start, this.loadTiles, maxZoom),
-      groundElevation(landing, this.loadTiles, maxZoom),
+      groundElevation(start, this.loadTiles, this.options),
+      groundElevation(landing, this.loadTiles, this.options),
     ])
     const startAltitude = startAltitudeFrom(req.startHeight, req.startHeightMode, startElevation)
 

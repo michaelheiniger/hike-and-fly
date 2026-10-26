@@ -6,6 +6,9 @@ export type HeightMode = 'agl' | 'amsl'
 
 export type LoadTiles = (z: number, coords: [number, number][]) => Promise<TileSet>
 
+/** Exact ground elevation at a point from an external service, null when unavailable. */
+export type PointElevation = (p: LngLat) => Promise<number | null>
+
 /** Error with a message meant for the pilot. */
 export class PlanError extends Error {}
 
@@ -17,6 +20,8 @@ export interface GridOptions {
   minCellSize?: number
   /** Largest search radius in meters. */
   maxRadius?: number
+  /** Exact start and landing elevations (the tiles keep the highest point per pixel). */
+  pointElevation?: PointElevation
 }
 
 export const DEFAULT_MAX_RADIUS = 60_000
@@ -28,9 +33,14 @@ export function squareBox(center: LngLat, radius: number) {
   return { north: center.lat + dLat, south: center.lat - dLat, west: center.lng - dLng, east: center.lng + dLng }
 }
 
-/** True ground elevation at a point (interpolated at the finest useful zoom). */
-export async function groundElevation(p: LngLat, loadTiles: LoadTiles, maxZoom: number): Promise<number> {
-  const z = Math.min(maxZoom, 14)
+/**
+ * Ground elevation at a point: exact from `pointElevation` when it answers, else
+ * interpolated from tiles at the finest useful zoom.
+ */
+export async function groundElevation(p: LngLat, loadTiles: LoadTiles, options: GridOptions): Promise<number> {
+  const exact = await options.pointElevation?.(p).catch(() => null)
+  if (exact != null) return exact
+  const z = Math.min(options.maxZoom, 14)
   const tiles = await loadTiles(z, tilesCovering(z, p.lat, p.lat, p.lng, p.lng))
   return sampleBilinear(tiles, z, p.lng, p.lat)
 }

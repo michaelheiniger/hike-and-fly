@@ -20,6 +20,7 @@
   let reach = $state.raw<ReachResult | null>(null)
   let reachRequest = $state.raw<ReachRequest | null>(null)
   let reachError = $state<string | null>(null)
+  let elevationSource = $state<string | null>(null)
 
   let route = $state.raw<RouteResult | null>(null)
   let routeRequest = $state.raw<RouteRequest | null>(null)
@@ -43,6 +44,7 @@
         return
       }
       reachError = null
+      elevationSource = outcome.elevationSource
       reach = outcome.result
       reachRequest = request
     },
@@ -260,7 +262,7 @@
       <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
     {/if}
 
-    <AssumptionsPanel result={reach} computing={busy.reach} error={reachError} bind:basemap>
+    <AssumptionsPanel result={reach} {elevationSource} computing={busy.reach} error={reachError} bind:basemap>
       {#snippet legend()}
         {#if reach}
           <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />

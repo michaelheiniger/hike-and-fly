@@ -44,7 +44,7 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
   const { maxZoom, maxRadius = DEFAULT_MAX_RADIUS } = options
   const t0 = performance.now()
 
-  const startElevation = await groundElevation(start, loadTiles, maxZoom)
+  const startElevation = await groundElevation(start, loadTiles, options)
   const startAltitude = startAltitudeFrom(req.startHeight, req.startHeightMode, startElevation)
 
   // Size the search area from the lowest terrain within the largest possible range.

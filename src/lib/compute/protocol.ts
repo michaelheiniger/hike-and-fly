@@ -7,6 +7,6 @@ export type WorkerRequest =
   | { id: number; kind: 'alternatives'; request: RouteRequest }
 
 export type WorkerResponse =
-  | { id: number; kind: 'reach'; type: 'result'; result: ReachResult }
+  | { id: number; kind: 'reach'; type: 'result'; result: ReachResult; elevationSource: string }
   | { id: number; kind: 'route' | 'alternatives'; type: 'result'; result: RouteResult }
   | { id: number; kind: WorkerRequest['kind']; type: 'error'; message: string }

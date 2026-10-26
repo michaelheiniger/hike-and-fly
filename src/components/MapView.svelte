@@ -6,7 +6,7 @@
   import { onMount } from 'svelte'
   import type { LngLat } from '../lib/terrain/geo'
   import { BASEMAPS, initialStyle, type BasemapId } from '../lib/map/style'
-  import { AWS_TERRARIUM } from '../lib/terrain/loader'
+  import { AWS_TERRARIUM, SWISS_ARCHIVE } from '../lib/terrain/loader'
 
   export interface Overlay {
     url: string
@@ -59,7 +59,7 @@
       center: start ? [start.lng, start.lat] : [8.2, 46.8],
       zoom: start ? 11 : 7.5,
       maxZoom: 18,
-      attributionControl: { compact: true, customAttribution: AWS_TERRARIUM.attribution },
+      attributionControl: { compact: true, customAttribution: [SWISS_ARCHIVE.attribution, AWS_TERRARIUM.attribution] },
     })
     m.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     m.addControl(new ScaleControl({ unit: 'metric' }), 'top-right')

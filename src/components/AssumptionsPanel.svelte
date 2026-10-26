@@ -7,6 +7,8 @@
 
   interface Props {
     result: ReachResult | null
+    /** Description of the elevation data used, from the worker. */
+    elevationSource: string | null
     computing: boolean
     error: string | null
     basemap: BasemapId
@@ -14,7 +16,7 @@
     legend?: Snippet
   }
 
-  let { result, computing, error, basemap = $bindable(), legend }: Props = $props()
+  let { result, elevationSource, computing, error, basemap = $bindable(), legend }: Props = $props()
 
   const ground = $derived(result?.startElevation ?? null)
 
@@ -190,8 +192,8 @@
     <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
   </div>
   <p class="explain">
-    {AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so obstacles are never
-    underestimated. Near the start the true ground height is used.
+    {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so obstacles
+    are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
   </p>
 
   <button
