@@ -167,7 +167,7 @@
           id: 'agl',
           type: 'raster',
           source: 'agl',
-          paint: { 'raster-opacity': 0.6, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
+          paint: { 'raster-opacity': 0.7, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
         },
         'route-casing',
       )

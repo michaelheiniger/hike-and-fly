@@ -9,14 +9,15 @@ export interface AglBand {
   label: string
 }
 
-/** Below the clearance: reachable as a final glide only (status color). */
-const BELOW_CLEARANCE = '#d03b3b'
+/** Below the clearance: reachable as a final glide only. */
+const BELOW_CLEARANCE = '#d73027'
 
 /**
- * Single-hue violet ramp, light (low AGL) to dark (high AGL). Violet stands out
- * against topographic maps (greens, grays, blue lakes).
+ * Red to green (ColorBrewer RdYlGn), low to high AGL: reads as danger to safe.
+ * The bright yellows in the middle keep some lightness contrast for
+ * red-green colour blindness; legend labels and the hover readout carry the values.
  */
-const RAMP = ['#b9aef0', '#9a8be8', '#7c69de', '#6250d6', '#4d3cb8', '#3a2c93', '#281f6c']
+const RAMP = ['#f46d43', '#fdae61', '#fee08b', '#d9ef8b', '#a6d96a', '#66bd63', '#1a9850']
 
 const LEVELS = [250, 500, 750, 1000, 1500, 2000]
 
