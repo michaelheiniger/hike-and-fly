@@ -55,13 +55,29 @@ Implementation notes:
   when it reaches the landing, otherwise the required one, dashed.
 - The arrival can exceed the arrival height at the required GR: the limiting point may be a
   ridge en route (the glide path touches the clearance line in the profile).
-- Known limitation: grid routes can bend where the straight line is clear (several cell paths
-  have the same length). Any-angle search or line-of-sight smoothing will fix the display.
 
 ### Alternative routes (milestone 3)
 
-Routes passing on different sides of a mountain: find the best route, penalize/block its
-corridor, search again; keep distinct routes (2–3), each with its own required GR.
+Routes passing on different sides of a mountain: find the best route, block its corridor
+(a band of 10 % of the straight distance, 300 m–1.5 km, left open near start and landing),
+search again; up to 3 routes. The pilot's own shortest route joins the list when it lies
+outside the corridors already found. Alternatives run in a second pass, after the best
+route is shown.
+
+- **Straightening.** Grid routes are replaced by straight segments wherever flyable
+  (string pulling against dense samples). This removes the zigzag and most of the grid's
+  distance overestimate; paths around obstacle corners stay within ~3 %.
+- **Exact required GR per route.** For a fixed route line, the minimum GR is a closed form
+  over samples (~2 per cell): `max(d / (h_start − terrain − clearance(d)))` and the arrival
+  condition. Arrival heights for any GR follow instantly, without searching.
+- **Labels.** Each route is described by the side of the straight line it lies on (average
+  signed offset) and how far: "South-east side, 1.0 km off", or "Along the straight line".
+
+### Display
+
+- AGL bands red → green (ColorBrewer RdYlGn); a color-blind scheme (viridis, monotonic
+  lightness) is a per-browser preference. The profile's glide path uses the same colors.
+- The launch zone (cells reached within the launch zone distance) is left uncolored.
 
 ## 2. Assumptions and defaults
 
