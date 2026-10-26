@@ -170,7 +170,26 @@ centered on the start) and the map is used only for display. The result is drawn
 image overlay with lat/lon corners; over the search extent the residual distortion is
 negligible for display.
 
-## 5. Milestones
+## 5. Offline (milestone 5)
+
+- **App shell:** a hand-written service worker (`sw/service-worker.js`) precaches the built
+  files; a small Vite plugin fills in the file list and a version per build. Navigations
+  fall back to the cached shell. Installable as a PWA (manifest, icons). Production only.
+- **Areas:** "Download this area" stores what the visible map area needs, one Cache Storage
+  cache per area (`hf-area-<id>`), with tile count and size estimate first, progress,
+  cancel, and a list of saved areas (show/delete); storage persistence is requested.
+  - swisstopo map and slope-class tiles, zooms 8 to the chosen detail (13–16), under their
+    real URLs, served by the service worker. OpenTopoMap is excluded: its policy forbids
+    bulk downloads.
+  - Elevation tiles: zooms 10–13 over the area (+5 km), 6–9 for 60 km around it (the reach
+    search looks for the lowest terrain far out). Stored under synthetic URLs
+    (`/offline-elevation/z/x/y.png`) that the computation worker reads first, directly from
+    Cache Storage: elevation works offline without the service worker.
+- All elevation sources are capped at zoom 13, so online and offline results agree.
+- Offline, start and landing heights come from the tiles (slightly high, as they keep the
+  maximum) unless the browser still caches the height service's answer (1 day).
+
+## 6. Milestones
 
 1. **Reachable area** — map, click to set start, start height (AGL/AMSL), AGL overlay for a
    glide ratio, Assumptions panel, legend.
