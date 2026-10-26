@@ -9,8 +9,8 @@
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import type { BasemapId } from './lib/map/style'
-  import { aglBands } from './lib/render/agl'
-  import { settings, writeUrl } from './lib/settings.svelte'
+  import { aglBands, renderAgl } from './lib/render/agl'
+  import { preferences, savePreferences, settings, writeUrl } from './lib/settings.svelte'
   import { cellAt, gridBounds, type LngLat } from './lib/terrain/geo'
 
   let basemap: BasemapId = $state('swisstopo')
@@ -43,10 +43,6 @@
       reachError = null
       reach = outcome.result
       reachRequest = request
-      const previous = overlay?.url
-      overlay = { url: URL.createObjectURL(outcome.png), ...gridBounds(outcome.result.grid) }
-      // Give the map time to load the new image before releasing the old one.
-      if (previous) setTimeout(() => URL.revokeObjectURL(previous), 5000)
     },
     onRoute(outcome, request) {
       if ('error' in outcome) {
@@ -90,7 +86,34 @@
     }
   })
 
-  const bands = $derived(aglBands(reachRequest?.clearance ?? settings.clearance))
+  const bands = $derived(aglBands(reachRequest?.clearance ?? settings.clearance, preferences.colorScheme))
+
+  $effect(() => savePreferences($state.snapshot(preferences)))
+
+  // Paint the AGL overlay; a color change only repaints, it does not recompute.
+  $effect(() => {
+    if (!reach) {
+      overlay = null
+      return
+    }
+    const r = reach
+    const image = renderAgl(r.agl, r.grid, bands)
+    const canvas = document.createElement('canvas')
+    canvas.width = image.width
+    canvas.height = image.height
+    canvas.getContext('2d')!.putImageData(new ImageData(image.rgba, image.width, image.height), 0, 0)
+    let cancelled = false
+    canvas.toBlob((png) => {
+      if (cancelled || !png) return
+      const previous = overlay?.url
+      overlay = { url: URL.createObjectURL(png), ...gridBounds(r.grid) }
+      // Give the map time to load the new image before releasing the old one.
+      if (previous) setTimeout(() => URL.revokeObjectURL(previous), 5000)
+    }, 'image/png')
+    return () => {
+      cancelled = true
+    }
+  })
 
   /** Route shown on the map and in the profile: the pilot's if it reaches, else the required one. */
   const shownRoute = $derived(route && settings.landing ? (route.withGlideRatio ?? route.required) : null)

@@ -1,4 +1,5 @@
 import type { HeightMode } from './compute/terrain'
+import type { ColorScheme } from './render/agl'
 import type { LngLat } from './terrain/geo'
 
 export interface Settings {
@@ -28,7 +29,7 @@ export const EXPLANATIONS = {
   glideRatio:
     'Still-air glide ratio. 7 is realistic for a light hike & fly wing at trim — below the brochure value, which assumes perfect conditions.',
   clearance:
-    'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (red) are reachable as a final glide only.',
+    'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (lowest legend band) are reachable as a final glide only.',
   launchZone:
     'After the start, the clearance ramps up from 0 to its full value over this distance — otherwise no ground launch would be possible.',
   arrivalHeight:
@@ -93,3 +94,29 @@ export function writeUrl(s: Settings): void {
 }
 
 export const settings: Settings = $state(readUrl())
+
+/** Per-viewer display preferences: kept in this browser, not in shared links. */
+export interface Preferences {
+  colorScheme: ColorScheme
+}
+
+const PREFERENCES_KEY = 'hike-and-fly:preferences'
+
+function readPreferences(): Preferences {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PREFERENCES_KEY) ?? '{}')
+    return { colorScheme: stored.colorScheme === 'colorblind' ? 'colorblind' : 'standard' }
+  } catch {
+    return { colorScheme: 'standard' }
+  }
+}
+
+export function savePreferences(p: Preferences): void {
+  try {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(p))
+  } catch {
+    // Storage unavailable (private mode, blocked): the preference lasts for this visit.
+  }
+}
+
+export const preferences: Preferences = $state(readPreferences())

@@ -9,23 +9,39 @@ export interface AglBand {
   label: string
 }
 
-/** Below the clearance: reachable as a final glide only. */
-const BELOW_CLEARANCE = '#d73027'
+export type ColorScheme = 'standard' | 'colorblind'
 
-/**
- * Red to green (ColorBrewer RdYlGn), low to high AGL: reads as danger to safe.
- * The bright yellows in the middle keep some lightness contrast for
- * red-green colour blindness; legend labels and the hover readout carry the values.
- */
-const RAMP = ['#f46d43', '#fdae61', '#fee08b', '#d9ef8b', '#a6d96a', '#66bd63', '#1a9850']
+interface Palette {
+  /** Below the clearance: reachable as a final glide only. */
+  belowClearance: string
+  /** Bands above the clearance, low to high AGL. */
+  ramp: string[]
+}
+
+const PALETTES: Record<ColorScheme, Palette> = {
+  /** Red to green (ColorBrewer RdYlGn): reads as danger to safe. */
+  standard: {
+    belowClearance: '#d73027',
+    ramp: ['#f46d43', '#fdae61', '#fee08b', '#d9ef8b', '#a6d96a', '#66bd63', '#1a9850'],
+  },
+  /**
+   * Viridis, dark purple to yellow: lightness rises steadily with AGL, so the
+   * order reads without telling hues apart (all common colour blindness types).
+   */
+  colorblind: {
+    belowClearance: '#440154',
+    ramp: ['#46327e', '#365c8d', '#277f8e', '#1fa187', '#4ac16d', '#a0da39', '#fde725'],
+  },
+}
 
 const LEVELS = [250, 500, 750, 1000, 1500, 2000]
 
 /** Color bands for AGL; the first band (0 – clearance) is "final glide only". */
-export function aglBands(clearance: number): AglBand[] {
+export function aglBands(clearance: number, scheme: ColorScheme = 'standard'): AglBand[] {
+  const { belowClearance, ramp } = PALETTES[scheme]
   const bands: AglBand[] = []
   if (clearance > 0) {
-    bands.push({ from: 0, to: clearance, color: BELOW_CLEARANCE, label: `0–${clearance} m · final glide only` })
+    bands.push({ from: 0, to: clearance, color: belowClearance, label: `0–${clearance} m · final glide only` })
   }
   const bounds = [clearance, ...LEVELS.filter((l) => l > clearance), Infinity]
   for (let i = 0; i < bounds.length - 1; i++) {
@@ -34,7 +50,7 @@ export function aglBands(clearance: number): AglBand[] {
     bands.push({
       from,
       to,
-      color: RAMP[Math.min(i, RAMP.length - 1)],
+      color: ramp[Math.min(i, ramp.length - 1)],
       label: to === Infinity ? `> ${from} m` : `${from}–${to} m`,
     })
   }

@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte'
   import type { ReachResult } from '../lib/compute/reach'
   import { BASEMAPS, type BasemapId } from '../lib/map/style'
-  import { DEFAULTS, EXPLANATIONS, LIMITS, settings } from '../lib/settings.svelte'
+  import { DEFAULTS, EXPLANATIONS, LIMITS, preferences, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
 
   interface Props {
@@ -213,6 +213,13 @@
       {#each Object.entries(BASEMAPS) as [id, b] (id)}
         <option value={id}>{b.label}</option>
       {/each}
+    </select>
+  </label>
+  <label class="field">
+    <span class="label">Colors</span>
+    <select bind:value={preferences.colorScheme}>
+      <option value="standard">Red to green</option>
+      <option value="colorblind">Color-blind friendly</option>
     </select>
   </label>
 </section>
