@@ -13,7 +13,7 @@ function publicFiles(dir: string): string[] {
 }
 
 /**
- * Emits sw.js from src/service-worker.js with the list of built files to precache
+ * Emits sw.js from sw/service-worker.js with the list of built files to precache
  * and a version derived from them, so each build replaces the cached app shell.
  */
 function serviceWorker(): Plugin {
@@ -33,7 +33,7 @@ function serviceWorker(): Plugin {
       const precache = ['/', ...built, ...publicFiles(publicDir)].sort()
       const hash = createHash('sha256')
       for (const file of Object.values(bundle)) hash.update(file.type === 'chunk' ? file.code : file.source)
-      const source = readFileSync('src/service-worker.js', 'utf8')
+      const source = readFileSync('sw/service-worker.js', 'utf8')
         .replace('__VERSION__', JSON.stringify(hash.digest('hex').slice(0, 12)))
         .replace('__PRECACHE__', JSON.stringify(precache))
       this.emitFile({ type: 'asset', fileName: 'sw.js', source })

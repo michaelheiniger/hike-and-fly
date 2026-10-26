@@ -5,6 +5,7 @@
   import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
   import { onMount } from 'svelte'
   import type { LngLat } from '../lib/terrain/geo'
+  import type { Bounds } from '../lib/offline/areas'
   import { BASEMAPS, initialStyle, type BasemapId } from '../lib/map/style'
   import { AWS_TERRARIUM, SWISS_ARCHIVE } from '../lib/terrain/loader'
 
@@ -33,6 +34,9 @@
     overlay: Overlay | null
     basemap: BasemapId
     showSlope: boolean
+    /** Fit the map to these bounds whenever the object changes. */
+    fitTo: Bounds | null
+    onviewchange: (bounds: Bounds) => void
     ontoggleslope: () => void
     onpick: (p: LngLat) => void
     onselectroute: (id: number) => void
@@ -41,7 +45,7 @@
     onhover: (p: LngLat | null) => void
   }
 
-  let { start, landing, routes, highlight, overlay, basemap, showSlope, ontoggleslope, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
+  let { start, landing, routes, highlight, overlay, basemap, showSlope, ontoggleslope, fitTo, onviewchange, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
     $props()
 
   let container: HTMLDivElement
@@ -124,6 +128,12 @@
     })
     m.on('mousemove', (e) => onhover({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
     m.on('mouseout', () => onhover(null))
+    const reportView = () => {
+      const b = m.getBounds()
+      onviewchange({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() })
+    }
+    m.on('moveend', reportView)
+    m.once('load', reportView)
     map = m
     return () => m.remove()
   })
@@ -203,6 +213,17 @@
   $effect(() => {
     if (!map || !loaded) return
     for (const id of Object.keys(BASEMAPS)) map.setLayoutProperty(id, 'visibility', id === basemap ? 'visible' : 'none')
+  })
+
+  $effect(() => {
+    if (!map || !fitTo) return
+    map.fitBounds(
+      [
+        [fitTo.west, fitTo.south],
+        [fitTo.east, fitTo.north],
+      ],
+      { padding: 20 },
+    )
   })
 
   $effect(() => {

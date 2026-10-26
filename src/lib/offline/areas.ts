@@ -44,8 +44,8 @@ const ELEVATION_COARSE = [6, 9] as const
 const COARSE_MARGIN = 60_000
 const FINE_MARGIN = 5_000
 
-/** Rough sizes per tile, for the estimate shown before downloading. */
-const TYPICAL_BYTES = { map: 30_000, slope: 10_000, elevation: 100_000 }
+/** Typical sizes per tile (measured around Grindelwald), for the estimate shown before downloading. */
+const TYPICAL_BYTES = { map: 31_000, slope: 18_000, elevation: 127_000 }
 
 function expand(b: Bounds, meters: number): Bounds {
   const dLat = meters / 111_000
@@ -177,7 +177,10 @@ export async function downloadArea(
     while (next < jobs.length && !signal.aborted) {
       const job = jobs[next++]
       try {
-        progress.bytes += await withRetry(job)
+        // Await first: `progress.bytes += await …` would read the total before awaiting
+        // and lose the other downloads' bytes.
+        const size = await withRetry(job)
+        progress.bytes += size
       } catch {
         if (signal.aborted) return
         progress.failed++

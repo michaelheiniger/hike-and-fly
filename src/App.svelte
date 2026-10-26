@@ -5,6 +5,8 @@
   import Legend from './components/Legend.svelte'
   import Profile from './components/Profile.svelte'
   import RouteSummary from './components/RouteSummary.svelte'
+  import OfflinePanel from './components/OfflinePanel.svelte'
+  import type { Bounds } from './lib/offline/areas'
   import { PlannerClient } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
@@ -35,6 +37,11 @@
   let narrow = $state(narrowQuery.matches)
   narrowQuery.addEventListener('change', (e) => (narrow = e.matches))
   let hover = $state<LngLat | null>(null)
+  let view = $state<Bounds | null>(null)
+  let fitTo = $state<Bounds | null>(null)
+  let online = $state(navigator.onLine)
+  addEventListener('online', () => (online = true))
+  addEventListener('offline', () => (online = false))
   let highlight = $state<LngLat | null>(null)
 
   const client = new PlannerClient({
@@ -218,6 +225,8 @@
     {basemap}
     showSlope={preferences.showSlope}
     ontoggleslope={() => (preferences.showSlope = !preferences.showSlope)}
+    {fitTo}
+    onviewchange={(b) => (view = b)}
     onpick={pick}
     onmovestart={(p) => (settings.start = p)}
     onmovelanding={(p) => (settings.landing = p)}
@@ -226,7 +235,10 @@
 
   <aside class="panel">
     <header>
-      <h1>Hike &amp; Fly Planner</h1>
+      <h1>
+        Hike &amp; Fly Planner
+        {#if !online}<span class="offline-badge">Offline</span>{/if}
+      </h1>
       {#if settings.start}
         <div class="click-mode">
           <span>Click on the map sets</span>
@@ -269,6 +281,15 @@
         {/if}
       {/snippet}
     </AssumptionsPanel>
+
+    <OfflinePanel
+      {view}
+      {online}
+      onshow={(b) => {
+        fitTo = { ...b }
+        basemap = 'swisstopo'
+      }}
+    />
   </aside>
 
   {#if !narrow}
@@ -316,6 +337,17 @@
   header h1 {
     font-size: 17px;
     margin: 0;
+  }
+
+  .offline-badge {
+    font-size: 11px;
+    font-weight: 500;
+    vertical-align: middle;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--critical);
+    color: #ffffff;
   }
 
   .hint {
