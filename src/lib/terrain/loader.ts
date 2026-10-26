@@ -1,4 +1,5 @@
 import { PMTiles } from 'pmtiles'
+import { offlineElevationTile } from '../offline/store'
 import { TILE_SIZE } from './geo'
 import { decodeTerrarium, tileKey, type TileSet } from './terrarium'
 
@@ -14,7 +15,8 @@ export interface TerrainSource {
 /** Global terrarium tiles hosted on AWS (Mapzen Terrain Tiles). */
 export const AWS_TERRARIUM: TerrainSource = {
   url: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
-  maxZoom: 15,
+  // Finer zooms exist, but are upsampled in the Alps; capping keeps sources consistent online and offline.
+  maxZoom: 13,
   description: 'AWS Terrain Tiles (global, ~10–30 m in the Alps)',
   attribution: 'Terrain: <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">Mapzen, AWS and data sources</a>',
 }
@@ -113,15 +115,36 @@ export class TileLoader {
   }
 
   private async fetchTile(z: number, x: number, y: number): Promise<Float32Array> {
+    return decodePng(await this.tileBytes(z, x, y))
+  }
+
+  /**
+   * PNG of a tile: from a downloaded area first, then the swissALTI3D archive,
+   * then the global source. `offline: false` skips downloaded areas (to download them).
+   */
+  async tileBytes(z: number, x: number, y: number, { offline = true } = {}): Promise<Blob> {
+    if (offline) {
+      const stored = await offlineElevationTile(z, x, y)
+      if (stored) return stored
+    }
     await this.info
     if (this.archive && z >= this.archiveZooms[0] && z <= this.archiveZooms[1]) {
       const tile = await this.archive.getZxy(z, x, y)
-      if (tile) return decodePng(new Blob([tile.data], { type: 'image/png' }))
+      if (tile) return new Blob([tile.data], { type: 'image/png' })
     }
     const url = this.source.url.replace('{z}', `${z}`).replace('{x}', `${x}`).replace('{y}', `${y}`)
-    const response = await fetch(url)
+    let response: Response
+    try {
+      response = await fetch(url)
+    } catch {
+      throw new Error(
+        navigator.onLine
+          ? `Elevation tile ${z}/${x}/${y} could not be loaded.`
+          : 'No elevation data offline for this area: download a larger area while online.',
+      )
+    }
     if (!response.ok) throw new Error(`Elevation tile ${z}/${x}/${y}: HTTP ${response.status}`)
-    return decodePng(await response.blob())
+    return response.blob()
   }
 }
 
