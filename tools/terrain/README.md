@@ -4,19 +4,28 @@
 terrarium PNG tiles, which the app reads at `public/terrain/swissalti3d.pmtiles`. Without
 the archive the app falls back to the global AWS Terrain Tiles.
 
+Run from `tools/terrain` with [uv](https://docs.astral.sh/uv/), which installs the pinned
+dependencies (numpy, Pillow; the official `pmtiles` reader for verification) on first use:
+
 ```sh
+cd tools/terrain
+
 # All of Switzerland (~50 GB streamed from swisstopo, ~1 h, output a few hundred MB)
-python3 tools/terrain/build_swissalti3d.py public/terrain/swissalti3d.pmtiles
+uv run build_swissalti3d.py ../../public/terrain/swissalti3d.pmtiles
 
 # A region, for testing
-python3 tools/terrain/build_swissalti3d.py public/terrain/swissalti3d.pmtiles --bbox 8.0 46.62 8.2 46.74
+uv run build_swissalti3d.py ../../public/terrain/swissalti3d.pmtiles --bbox 8.0 46.62 8.2 46.74
+
+# Check an archive with the official pmtiles reader
+uv run verify_pmtiles.py ../../public/terrain/swissalti3d.pmtiles
 
 # Tests (no network)
-python3 -m unittest discover tools/terrain
+uv run python -m unittest
 ```
 
-Requirements: Python 3, numpy, Pillow. No GDAL: LV95 is converted with swisstopo's
-approximate formulas (~1 m), far below the output pixel size.
+No GDAL: LV95 is converted with swisstopo's approximate formulas (~1 m), far below the
+output pixel size. Dependency versions are locked in `uv.lock` and limited to releases at
+least two weeks old (`exclude-newer` in `pyproject.toml`).
 
 What it does, and why (see `docs/design.md`):
 

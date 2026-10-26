@@ -1,0 +1,15 @@
+[project]
+name = "hike-and-fly-terrain"
+version = "0.1.0"
+description = "Elevation data pipeline for the hike & fly planner"
+requires-python = ">=3.11"
+dependencies = ["numpy>=2", "pillow>=11"]
+
+[dependency-groups]
+# Official PMTiles reader, to verify archives written by our own writer.
+dev = ["pmtiles>=3"]
+
+[tool.uv]
+package = false
+# Only releases at least two weeks old.
+exclude-newer = "2026-10-13T00:00:00Z"
