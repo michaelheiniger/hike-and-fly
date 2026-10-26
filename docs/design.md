@@ -110,6 +110,15 @@ Public **AWS Terrain Tiles** (terrarium encoding, Web Mercator, global, max zoom
 
 ### Switzerland (milestone 4)
 
+Built by `tools/terrain/build_swissalti3d.py` (see its README) into
+`public/terrain/swissalti3d.pmtiles`; the app falls back to AWS tiles where the archive has
+none, and caps zooms at the archive's maximum (13, ~13 m pixels) so sources never mix in an
+area. No GDAL: LV95 → WGS84 uses swisstopo's approximate formulas (~1 m). The 2 m tiles are
+streamed and discarded (the whole country is ~50 GB of downloads, ~1 h).
+
+Start and landing elevations come from swisstopo's height service when online (exact),
+since the tiles keep the maximum per pixel; offline, the tiles are interpolated.
+
 **swissALTI3D** (swisstopo, 2 m, open data) preprocessed once by a script in the repo:
 
 1. **Resample** 2 m → pyramid of levels (finest ~6–13 m). 2 m would be hundreds of millions
