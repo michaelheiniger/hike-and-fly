@@ -63,11 +63,19 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 /**
- * RGBA image of the AGL bands, unreachable cells transparent. The grid has rows of
- * constant latitude step, while a map image overlay is stretched linearly in Web
- * Mercator: output rows are resampled at Mercator-linear latitudes to line up.
+ * RGBA image of the AGL bands. Unreachable cells are transparent, and so is the
+ * launch zone (cells reached within `launchZone` meters of flight), where the
+ * glider is still leaving the slope. The grid has rows of constant latitude step,
+ * while a map image overlay is stretched linearly in Web Mercator: output rows
+ * are resampled at Mercator-linear latitudes to line up.
  */
-export function renderAgl(agl: Float32Array, grid: GeoGrid, bands: AglBand[]): { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> } {
+export function renderAgl(
+  agl: Float32Array,
+  distance: Float32Array,
+  launchZone: number,
+  grid: GeoGrid,
+  bands: AglBand[],
+): { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> } {
   const width = grid.cols
   const height = grid.rows
   const rgba = new Uint8ClampedArray(width * height * 4)
@@ -79,8 +87,9 @@ export function renderAgl(agl: Float32Array, grid: GeoGrid, bands: AglBand[]): {
     const lat = latFromMercatorY(yNorth + ((j + 0.5) / height) * (ySouth - yNorth))
     const row = Math.min(grid.rows - 1, Math.max(0, Math.floor((grid.north - lat) / grid.dLat)))
     for (let c = 0; c < width; c++) {
-      const v = agl[row * grid.cols + c]
-      if (Number.isNaN(v)) continue
+      const i = row * grid.cols + c
+      const v = agl[i]
+      if (Number.isNaN(v) || distance[i] < launchZone) continue
       let b = bands.length - 1
       while (b > 0 && v < bands[b].from) b--
       const [r, g, bl] = colors[b]

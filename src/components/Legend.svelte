@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { AglBand } from '../lib/render/agl'
 
-  let { bands }: { bands: AglBand[] } = $props()
+  let { bands, launchZone }: { bands: AglBand[]; launchZone: number } = $props()
 </script>
 
 <section>
@@ -13,6 +13,12 @@
         <span>{band.label}</span>
       </li>
     {/each}
+    {#if launchZone > 0}
+      <li>
+        <span class="swatch launch"></span>
+        <span>Launch zone (first {launchZone} m): not colored</span>
+      </li>
+    {/if}
   </ul>
 </section>
 
@@ -40,6 +46,12 @@
     gap: 8px;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
+  }
+
+  .swatch.launch {
+    background: transparent;
+    border: 1px dashed var(--text-muted);
+    opacity: 1;
   }
 
   .swatch {

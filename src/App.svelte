@@ -101,7 +101,7 @@
       return
     }
     const r = reach
-    const image = renderAgl(r.agl, r.grid, bands)
+    const image = renderAgl(r.agl, r.distance, reachRequest?.launchZone ?? 0, r.grid, bands)
     const canvas = document.createElement('canvas')
     canvas.width = image.width
     canvas.height = image.height
@@ -161,8 +161,10 @@
     const i = cell.row * reach.grid.cols + cell.col
     const d = reach.distance[i]
     if (d === Infinity) return { reachable: false as const }
+    if (d < reachRequest.launchZone) return { reachable: true as const, launchZone: true as const }
     return {
       reachable: true as const,
+      launchZone: false as const,
       agl: reach.agl[i],
       altitude: reach.startAltitude - d / reachRequest.glideRatio,
       distance: d,
@@ -259,7 +261,7 @@
     <AssumptionsPanel result={reach} computing={busy.reach} error={reachError} bind:basemap>
       {#snippet legend()}
         {#if reach}
-          <Legend {bands} />
+          <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
         {/if}
       {/snippet}
     </AssumptionsPanel>
@@ -271,7 +273,9 @@
 
   {#if readout && !shownRoute}
     <div class="readout" role="status">
-      {#if readout.reachable}
+      {#if readout.reachable && readout.launchZone}
+        <span>Launch zone</span>
+      {:else if readout.reachable}
         <strong>{Math.round(readout.agl)} m AGL</strong>
         <span>{Math.round(readout.altitude)} m AMSL</span>
         <span>{(readout.distance / 1000).toFixed(1)} km flown</span>
