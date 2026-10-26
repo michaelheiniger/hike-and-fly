@@ -25,3 +25,4 @@ dist-ssr
 
 # Generated elevation data (tools/terrain)
 public/terrain/
+__pycache__/
