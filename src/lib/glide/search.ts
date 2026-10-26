@@ -25,6 +25,8 @@ export interface GlideParams {
   clearance: number
   /** Distance over which the clearance ramps from 0 to full after the start (m). */
   launchZone: number
+  /** Stop as soon as the shortest distance to this cell is known. */
+  target?: number
 }
 
 export interface GlideResult {
@@ -74,7 +76,7 @@ const MOVES: Move[] = (() => {
  */
 export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResult {
   const { cols, rows, elevation, cellHeight, rowCellWidth } = grid
-  const { startCol, startRow, startAltitude, glideRatio, clearance, launchZone } = params
+  const { startCol, startRow, startAltitude, glideRatio, clearance, launchZone, target = -1 } = params
   const cellCount = cols * rows
 
   const distance = new Float32Array(cellCount).fill(Infinity)
@@ -106,6 +108,7 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
     const d = heap.peekKey()
     const cell = heap.pop()
     if (d > distance[cell]) continue // stale entry
+    if (cell === target) break
 
     const r = (cell / cols) | 0
     const c = cell - r * cols
