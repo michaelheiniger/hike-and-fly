@@ -32,6 +32,8 @@
     highlight: LngLat | null
     overlay: Overlay | null
     basemap: BasemapId
+    showSlope: boolean
+    ontoggleslope: () => void
     onpick: (p: LngLat) => void
     onselectroute: (id: number) => void
     onmovestart: (p: LngLat) => void
@@ -39,7 +41,7 @@
     onhover: (p: LngLat | null) => void
   }
 
-  let { start, landing, routes, highlight, overlay, basemap, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
+  let { start, landing, routes, highlight, overlay, basemap, showSlope, ontoggleslope, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
     $props()
 
   let container: HTMLDivElement
@@ -98,6 +100,8 @@
         layout: { 'line-join': 'round' },
         paint: { 'line-color': '#1a1a19', 'line-width': 3, 'line-dasharray': [2, 1.5] },
       })
+      // Slope classes above the AGL overlay (inserted below it), under the routes.
+      m.moveLayer('slope', 'route-other')
       m.on('mouseenter', 'route-other', () => (m.getCanvas().style.cursor = 'pointer'))
       m.on('mouseleave', 'route-other', () => (m.getCanvas().style.cursor = ''))
       m.addLayer({
@@ -201,6 +205,11 @@
     for (const id of Object.keys(BASEMAPS)) map.setLayoutProperty(id, 'visibility', id === basemap ? 'visible' : 'none')
   })
 
+  $effect(() => {
+    if (!map || !loaded) return
+    map.setLayoutProperty('slope', 'visibility', showSlope ? 'visible' : 'none')
+  })
+
   // AGL overlay as an image source, above the basemaps.
   $effect(() => {
     if (!map || !loaded) return
@@ -229,13 +238,16 @@
           source: 'agl',
           paint: { 'raster-opacity': 0.7, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
         },
-        'route-other',
+        'slope',
       )
     }
   })
 </script>
 
 <div class="map" bind:this={container}></div>
+<button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
+  Slopes &gt; 30°
+</button>
 
 <style>
   .map :global(.route-badge) {
@@ -261,5 +273,24 @@
   .map {
     position: absolute;
     inset: 0;
+  }
+
+  .layer-toggle {
+    position: absolute;
+    top: 110px;
+    right: 10px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a1a19;
+    background: #ffffff;
+    border: 0;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+  }
+
+  .layer-toggle[aria-pressed='true'] {
+    background: #1a1a19;
+    color: #ffffff;
   }
 </style>

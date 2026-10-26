@@ -98,6 +98,8 @@ export const settings: Settings = $state(readUrl())
 /** Per-viewer display preferences: kept in this browser, not in shared links. */
 export interface Preferences {
   colorScheme: ColorScheme
+  /** swisstopo slope classes over 30°. */
+  showSlope: boolean
 }
 
 const PREFERENCES_KEY = 'hike-and-fly:preferences'
@@ -105,9 +107,9 @@ const PREFERENCES_KEY = 'hike-and-fly:preferences'
 function readPreferences(): Preferences {
   try {
     const stored = JSON.parse(localStorage.getItem(PREFERENCES_KEY) ?? '{}')
-    return { colorScheme: stored.colorScheme === 'colorblind' ? 'colorblind' : 'standard' }
+    return { colorScheme: stored.colorScheme === 'colorblind' ? 'colorblind' : 'standard', showSlope: stored.showSlope === true }
   } catch {
-    return { colorScheme: 'standard' }
+    return { colorScheme: 'standard', showSlope: false }
   }
 }
 

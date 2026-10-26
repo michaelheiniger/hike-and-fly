@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { ReachResult } from '../lib/compute/reach'
-  import { BASEMAPS, type BasemapId } from '../lib/map/style'
+  import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
   import { DEFAULTS, EXPLANATIONS, LIMITS, preferences, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
 
@@ -215,6 +215,18 @@
       {/each}
     </select>
   </label>
+  <label class="toggle">
+    <input type="checkbox" bind:checked={preferences.showSlope} />
+    <span class="label">Slope classes over 30°</span>
+  </label>
+  {#if preferences.showSlope}
+    <ul class="slope-legend">
+      {#each SLOPE_OVERLAY.classes as c (c.label)}
+        <li><span class="swatch" style:background={c.color}></span>{c.label}</li>
+      {/each}
+    </ul>
+    <p class="explain">swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.</p>
+  {/if}
   <label class="field">
     <span class="label">Colors</span>
     <select bind:value={preferences.colorScheme}>
@@ -335,6 +347,43 @@
 
   .warning {
     color: var(--warning-text);
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .toggle input {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    margin: 0;
+  }
+
+  .slope-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .slope-legend li {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .slope-legend .swatch {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
   }
 
   .link {

@@ -214,6 +214,8 @@
     {highlight}
     {overlay}
     {basemap}
+    showSlope={preferences.showSlope}
+    ontoggleslope={() => (preferences.showSlope = !preferences.showSlope)}
     onpick={pick}
     onmovestart={(p) => (settings.start = p)}
     onmovelanding={(p) => (settings.landing = p)}
