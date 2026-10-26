@@ -111,10 +111,12 @@ Static site, no backend — all computation in the browser (required for offline
 
 ```
 src/
-  lib/glide/       pure algorithm (no DOM): grid, search, AGL
-  lib/terrain/     tile math, terrarium decoding, tile fetching, grid assembly
-  lib/worker/      Web Worker entry: fetch terrain → search → overlay image
-  lib/settings/    defaults, URL encoding
+  lib/glide/       pure algorithm (no DOM): Dijkstra search, AGL, route tracing
+  lib/terrain/     geo math, terrarium decoding, grid sampling, tile loading
+  lib/compute/     reach pipeline (terrain → search), Web Worker and its client
+  lib/render/      AGL color bands and overlay image
+  lib/map/         basemap definitions
+  lib/settings.svelte.ts   defaults, explanations, URL encoding
   components/      Svelte UI (map, assumptions panel, legend)
 ```
 

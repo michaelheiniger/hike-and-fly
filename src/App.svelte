@@ -158,13 +158,19 @@
   }
 
   @media (max-width: 640px) {
+    /* Map above, panel below: map controls stay visible. */
+    main :global(.map) {
+      bottom: 45%;
+    }
+
     .panel {
       top: auto;
       bottom: 0;
       left: 0;
       right: 0;
       width: auto;
-      max-height: 45%;
+      height: 45%;
+      max-height: none;
       border-radius: 12px 12px 0 0;
       padding: 12px 16px;
     }
