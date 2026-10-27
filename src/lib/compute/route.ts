@@ -213,7 +213,7 @@ export class RoutePlanner {
     // Centered between start and landing, with room for detours on all sides.
     const center = { lng: (start.lng + landing.lng) / 2, lat: (start.lat + landing.lat) / 2 }
     const radius = Math.min(maxRadius, straightDistance / 2 + Math.max(3000, 0.5 * straightDistance))
-    const prepared = await loadElevationGrid(center, radius, start, launchZone, this.loadTiles, {
+    const prepared = await loadElevationGrid(center, radius, start, launchZone, startElevation, this.loadTiles, {
       ...this.options,
       maxCells: ROUTE_MAX_CELLS,
     })

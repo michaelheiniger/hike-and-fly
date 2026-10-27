@@ -52,7 +52,7 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
   const lowest = await lowestTerrain(start, upperRadius, loadTiles, maxZoom)
   const radius = Math.min(maxRadius, Math.max(0, startAltitude - lowest) * glideRatio * 1.05 + 500)
 
-  const { grid, elevationGrid, cellSize, zoom } = await loadElevationGrid(start, radius, start, launchZone, loadTiles, options)
+  const { grid, elevationGrid, cellSize, zoom } = await loadElevationGrid(start, radius, start, launchZone, startElevation, loadTiles, options)
   const t1 = performance.now()
 
   const center = (grid.cols - 1) / 2

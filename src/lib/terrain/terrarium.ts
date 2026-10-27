@@ -117,7 +117,9 @@ function bilinear(index: TileIndex, z: number, lng: number, lat: number): number
  * Elevation of every grid cell. Obstacles must never be underestimated, so a cell
  * takes the maximum of the 2×2 pixels around its center. Within `trueRadius` of
  * `center` the bilinear value is used instead: the max would make the slope
- * below a launch look flatter than it is and block ground launches.
+ * below a launch look flatter than it is and block ground launches. `trueOffset`
+ * is subtracted there: tiles that keep their highest point read a few meters
+ * above the exact ground, which would put the cells next to a launch above it.
  */
 export function sampleGrid(
   tiles: TileSet,
@@ -125,6 +127,7 @@ export function sampleGrid(
   grid: GeoGrid,
   center: { lng: number; lat: number },
   trueRadius: number,
+  trueOffset = 0,
 ): Float32Array {
   const { cols, rows } = grid
   const index = new TileIndex(tiles, z)
@@ -144,7 +147,7 @@ export function sampleGrid(
       const lng = grid.west + (c + 0.5) * grid.dLng
       const dx = (lng - center.lng) * m.lng
       if (dx * dx + dy * dy <= trueRadius2) {
-        out[i] = bilinear(index, z, lng, lat)
+        out[i] = bilinear(index, z, lng, lat) - trueOffset
         continue
       }
       const x0 = Math.floor(colPx[c])

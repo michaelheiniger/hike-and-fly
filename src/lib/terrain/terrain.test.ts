@@ -85,4 +85,17 @@ describe('terrarium', () => {
     expect(v).toBeGreaterThanOrEqual(exact)
     expect(v).toBeLessThan(exact + 1)
   })
+
+  it('lowers only the values near the start by the offset', () => {
+    const z = 12
+    const center = { lng: 7.9, lat: 46.6 }
+    const grid = makeGeoGrid(center, 2000, 50)
+    const tiles = rampTiles(z, 46.7, 46.5, 7.8, 8.0)
+    const plain = sampleGrid(tiles, z, grid, center, 500)
+    const lowered = sampleGrid(tiles, z, grid, center, 500, 7)
+    const near = 40 * grid.cols + 42
+    const far = 40 * grid.cols + 5
+    expect(lowered[near]).toBeCloseTo(plain[near] - 7, 3)
+    expect(lowered[far]).toBe(plain[far])
+  })
 })

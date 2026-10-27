@@ -73,13 +73,15 @@ export interface PreparedGrid {
 
 /**
  * Elevation grid of `radius` around `center`, as fine as the cell budget allows.
- * Within `trueRadius` of `start` the true elevation is used (see `sampleGrid`).
+ * Within `trueRadius` of `start` the true elevation is used (see `sampleGrid`),
+ * lowered to agree with `startGround`, the exact ground at the start.
  */
 export async function loadElevationGrid(
   center: LngLat,
   radius: number,
   start: LngLat,
   trueRadius: number,
+  startGround: number,
   loadTiles: LoadTiles,
   options: GridOptions,
 ): Promise<PreparedGrid> {
@@ -89,7 +91,8 @@ export async function loadElevationGrid(
   const grid = makeGeoGrid(center, radius, cellSize)
   const box = squareBox(center, radius + 2 * cellSize)
   const tiles = await loadTiles(zoom, tilesCovering(zoom, box.north, box.south, box.west, box.east))
-  const elevation = sampleGrid(tiles, zoom, grid, start, trueRadius)
+  const offset = Math.max(0, sampleBilinear(tiles, zoom, start.lng, start.lat) - startGround)
+  const elevation = sampleGrid(tiles, zoom, grid, start, trueRadius, offset)
   const { cellHeight, rowCellWidth } = cellMetrics(grid)
   return { grid, elevationGrid: { cols: grid.cols, rows: grid.rows, elevation, cellHeight, rowCellWidth }, cellSize, zoom }
 }

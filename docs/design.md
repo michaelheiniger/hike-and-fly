@@ -45,7 +45,10 @@ Implementation notes:
 
 - The route search uses its own grid, centered between start and landing with room for
   detours (≤ 1 M cells, as it runs ~10 times). Each run stops once the landing is settled.
-- Start and landing cells use their true elevation; the rest of the grid keeps the max.
+- Start and landing cells use their true elevation; the rest of the grid keeps the max,
+  except within the launch zone: there the elevation is interpolated and lowered by the
+  difference between the tiles and the exact start elevation at the start. Otherwise the
+  cells next to a ground launch read a few meters above it and nothing is reachable.
 - The required GR is rounded up to 0.1 (conservative), and the grid's distance overestimate
   (≤ ~3–5 %) also errs on the safe side.
 - Terrain and required GR are cached per (start, landing, assumptions): moving the GR slider
