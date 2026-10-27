@@ -43,6 +43,9 @@ AWS_TERRARIUM = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}
 SWITZERLAND = (5.9, 45.8, 10.5, 47.85)
 # Pixels without swissALTI3D data.
 NODATA = -np.inf
+# The lowest dry land on Earth (Dead Sea shore, ~-430 m). AWS has sea depths and
+# rare spikes (down to -20775 m in Lombardy) below it: the surface is what a glider meets.
+LOWEST_GROUND = -450.0
 # Mosaic chunks are tiles of this zoom: 16×16 tiles of 256² at zoom 13.
 CHUNK_ZOOM = 9
 
@@ -153,7 +156,7 @@ def read_alti_tile(data: bytes) -> tuple[np.ndarray, float, float, float]:
 
 
 def aws_tile(z: int, x: int, y: int) -> np.ndarray:
-    return decode_terrarium(fetch(AWS_TERRARIUM.format(z=z, x=x, y=y)))
+    return np.maximum(decode_terrarium(fetch(AWS_TERRARIUM.format(z=z, x=x, y=y))), LOWEST_GROUND)
 
 
 # --- Mosaic ----------------------------------------------------------------------

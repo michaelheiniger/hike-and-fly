@@ -133,7 +133,10 @@ since the tiles keep the maximum per pixel; offline, the tiles are interpolated.
    another file) and MapLibre can render hillshade/3D terrain from the same tiles.
 4. **Encode as terrarium PNG**: `elevation = R·256 + G + B/256 − 32768`. Lossless, decoded
    natively by browsers, read natively by MapLibre.
-5. **Package as one PMTiles file**: served from any static host via HTTP range requests, and
+5. **Fill outside Switzerland** from the AWS tiles, clamped at −450 m (the lowest dry land):
+   AWS has sea depths and rare spikes (down to −20775 m in Lombardy). The app clamps any
+   source the same way.
+6. **Package as one PMTiles file**: served from any static host via HTTP range requests, and
    one file (or a regional slice) to store for offline use.
 
 The app only knows "a terrarium tile source"; Swiss or global data are interchangeable.

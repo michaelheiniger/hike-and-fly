@@ -1,10 +1,17 @@
 import { TILE_SIZE, worldPixel, type GeoGrid, cellCenter, metersPerDegree } from './geo'
 
-/** Decodes terrarium RGBA pixels: elevation = R·256 + G + B/256 − 32768. */
+/**
+ * The lowest dry land on Earth (Dead Sea shore, ~−430 m). The AWS tiles have sea
+ * depths and rare spikes (down to −20775 m in Lombardy) below it: the surface is
+ * what a glider meets.
+ */
+export const LOWEST_GROUND = -450
+
+/** Decodes terrarium RGBA pixels: elevation = R·256 + G + B/256 − 32768, at least LOWEST_GROUND. */
 export function decodeTerrarium(rgba: Uint8ClampedArray | Uint8Array): Float32Array {
   const out = new Float32Array(rgba.length / 4)
   for (let i = 0, p = 0; i < out.length; i++, p += 4) {
-    out[i] = rgba[p] * 256 + rgba[p + 1] + rgba[p + 2] / 256 - 32768
+    out[i] = Math.max(LOWEST_GROUND, rgba[p] * 256 + rgba[p + 1] + rgba[p + 2] / 256 - 32768)
   }
   return out
 }

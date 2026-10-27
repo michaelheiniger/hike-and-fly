@@ -44,6 +44,11 @@ describe('terrarium', () => {
     expect(out[1]).toBe(0.5)
   })
 
+  it('clamps sea depths and spikes to the lowest dry land', () => {
+    // −20775 m: 11993 = 46·256 + 217
+    expect(decodeTerrarium(new Uint8ClampedArray([46, 217, 0, 255]))[0]).toBe(-450)
+  })
+
   /** Tiles whose elevation equals the world pixel x coordinate: a ramp rising eastwards. */
   function rampTiles(z: number, north: number, south: number, west: number, east: number): TileSet {
     const tiles: TileSet = new Map()
