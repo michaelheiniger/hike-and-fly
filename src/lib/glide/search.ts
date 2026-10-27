@@ -76,7 +76,7 @@ const MOVES: Move[] = (() => {
  */
 export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResult {
   const { cols, rows, elevation, cellHeight, rowCellWidth } = grid
-  const { startCol, startRow, startAltitude, glideRatio, clearance, launchZone, target = -1 } = params
+  const { startCol, startRow, glideRatio, clearance, launchZone, target = -1 } = params
   const cellCount = cols * rows
 
   const distance = new Float32Array(cellCount).fill(Infinity)
@@ -85,7 +85,9 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
 
   if (startCol < 0 || startCol >= cols || startRow < 0 || startRow >= rows) return result
   const start = startRow * cols + startCol
-  if (startAltitude < elevation[start]) return result
+  // Float32 like the stored elevation: a start clamped to the ground rounds up.
+  if (Math.fround(params.startAltitude) < elevation[start]) return result
+  const startAltitude = Math.max(params.startAltitude, elevation[start])
 
   const clearanceAt = (d: number) => (launchZone > 0 ? clearance * Math.min(1, d / launchZone) : clearance)
 

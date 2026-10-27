@@ -50,6 +50,13 @@ describe('searchGlide', () => {
     expect(result.distance[idx(grid, 100, 190)]).toBeCloseTo(900, -1)
   })
 
+  it('launches from a summit whose elevation float32 rounds up', () => {
+    // 2857.3 is stored as 2857.300048…: the start must still count as on the ground.
+    const grid = makeGrid(101, 101, (c, r) => Math.max(0, 2857.3 - Math.hypot(c - 50, r - 50) * CELL * 0.5))
+    const result = searchGlide(grid, params({ startCol: 50, startRow: 50, startAltitude: 2857.3 }))
+    expect(result.distance[idx(grid, 50, 90)]).toBeCloseTo(400, -1)
+  })
+
   it('cannot take off from flat ground at AGL 0', () => {
     const grid = makeGrid(21, 21, () => 1000)
     const result = searchGlide(grid, params({ startCol: 10, startRow: 10, startAltitude: 1000, launchZone: 500, clearance: 100 }))
