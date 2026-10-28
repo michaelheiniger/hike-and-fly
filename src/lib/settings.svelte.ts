@@ -90,7 +90,8 @@ export function writeUrl(s: Settings): void {
     p.set('h', `${s.startHeight}`)
     p.set('hm', s.startHeightMode)
   }
-  if (s.glideRatio !== DEFAULTS.glideRatio) p.set('gr', `${s.glideRatio}`)
+  // Always written, so a link keeps its glide ratio when the default changes.
+  p.set('gr', `${s.glideRatio}`)
   if (s.clearance !== DEFAULTS.clearance) p.set('cl', `${s.clearance}`)
   if (s.launchZone !== DEFAULTS.launchZone) p.set('lz', `${s.launchZone}`)
   if (s.arrivalHeight !== DEFAULTS.arrivalHeight) p.set('ar', `${s.arrivalHeight}`)
