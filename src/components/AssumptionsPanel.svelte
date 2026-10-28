@@ -76,6 +76,11 @@
         ⚠ No glide possible from here: the ground around the start is not steeper than the glide path. Pick a steeper
         slope or add start height.
       </span>
+    {:else if result && result.beyondLaunchZone === 0}
+      <span class="warning">
+        ⚠ Nothing is reachable beyond the launch zone (first {settings.launchZone} m, left uncolored): the ground below
+        the start is barely steeper than the glide path. Pick a steeper slope or add start height.
+      </span>
     {:else if result?.truncated}
       <span class="warning">⚠ The reachable area reaches the edge of the search area and may be cut off.</span>
     {:else if result}

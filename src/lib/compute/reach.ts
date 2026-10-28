@@ -35,6 +35,8 @@ export interface ReachResult {
   truncated: boolean
   /** Number of reachable cells; 1 means no glide is possible from the start. */
   reachableCells: number
+  /** Reachable cells beyond the launch zone, which is left uncolored on the map. */
+  beyondLaunchZone: number
   timings: { terrain: number; search: number }
 }
 
@@ -69,7 +71,12 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
   })
   const agl = computeAgl(elevationGrid, result, startAltitude, glideRatio)
   let reachableCells = 0
-  for (const d of result.distance) if (d !== Infinity) reachableCells++
+  let beyondLaunchZone = 0
+  for (const d of result.distance) {
+    if (d === Infinity) continue
+    reachableCells++
+    if (d >= launchZone) beyondLaunchZone++
+  }
   const t2 = performance.now()
 
   return {
@@ -82,6 +89,7 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
     distance: result.distance,
     truncated: result.truncated,
     reachableCells,
+    beyondLaunchZone,
     timings: { terrain: t1 - t0, search: t2 - t1 },
   }
 }
