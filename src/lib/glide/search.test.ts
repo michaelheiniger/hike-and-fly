@@ -112,6 +112,14 @@ describe('searchGlide', () => {
     expect(run(500)).toBeCloseTo(1000)
   })
 
+  it('asks little clearance close to the launch', () => {
+    // AGL grows by 10 m per 100 m flown: 30 m at 300 m, where a linear ramp asks 60 m
+    // and the cubic one 21.6 m. Ground ends at 310 m so the glide stops there.
+    const grid = makeGrid(51, 1, (c) => (c <= 31 ? 1000 - c * CELL * 0.2 : 2000))
+    const result = searchGlide(grid, params({ startAltitude: 1000, clearance: 100, launchZone: 500 }))
+    expect(result.distance[31]).toBeCloseTo(310)
+  })
+
   it('reports a truncated area when reachable cells touch the border', () => {
     const grid = makeGrid(21, 21, () => 0)
     const result = searchGlide(grid, params({ startCol: 10, startRow: 10, startAltitude: 1000 }))

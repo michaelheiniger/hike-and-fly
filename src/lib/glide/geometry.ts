@@ -33,8 +33,13 @@ export interface RouteGeometry {
   length: number
 }
 
+/**
+ * Clearance required after flying `d` meters. Over the launch zone it grows from 0 with
+ * the cube of the distance: almost nothing while the pilot is still close to the slope
+ * (a summit's flat top, a shoulder below the launch), the full value at its end.
+ */
 export function clearanceAt(ctx: Pick<RouteContext, 'clearance' | 'launchZone'>, d: number): number {
-  return ctx.launchZone > 0 ? ctx.clearance * Math.min(1, d / ctx.launchZone) : ctx.clearance
+  return ctx.launchZone > 0 ? ctx.clearance * Math.min(1, d / ctx.launchZone) ** 3 : ctx.clearance
 }
 
 function segmentLength(grid: ElevationGrid, c0: number, r0: number, c1: number, r1: number): number {

@@ -1,3 +1,4 @@
+import { clearanceAt as rampedClearance } from './geometry'
 import { MinHeap } from './heap'
 
 /**
@@ -72,7 +73,7 @@ const MOVES: Move[] = (() => {
  * highest possible altitude over each cell. A cell can be *reached* when the glider
  * arrives above the terrain (AGL >= 0); the glider can only *continue* from it when
  * it is at least the clearance above the terrain. The clearance ramps up over the
- * launch zone so that a ground launch (AGL 0) is possible.
+ * launch zone (see `clearanceAt`) so that a ground launch (AGL 0) is possible.
  */
 export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResult {
   const { cols, rows, elevation, cellHeight, rowCellWidth } = grid
@@ -89,7 +90,8 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
   if (Math.fround(params.startAltitude) < elevation[start]) return result
   const startAltitude = Math.max(params.startAltitude, elevation[start])
 
-  const clearanceAt = (d: number) => (launchZone > 0 ? clearance * Math.min(1, d / launchZone) : clearance)
+  const ramp = { clearance, launchZone }
+  const clearanceAt = (d: number) => rampedClearance(ramp, d)
 
   // Step lengths per row, since the cell width varies with latitude.
   const moveCount = MOVES.length
