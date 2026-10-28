@@ -4,6 +4,7 @@
   import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
   import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
+  import InfoTip from './InfoTip.svelte'
 
   interface Props {
     result: ReachResult | null
@@ -18,7 +19,7 @@
     legend?: Snippet
     /** Rendered after the settings, inside the fold when collapsible. */
     footer?: Snippet
-    /** Folds the settings below the legend behind a summary line, and drops the glide explanations (narrow screens). */
+    /** Folds the settings below the legend behind a summary line (narrow screens). */
     collapsible?: boolean
   }
 
@@ -49,22 +50,6 @@
       // Show the value used, also when it equals the previous one and nothing rerenders.
       input.value = String(settings[key])
     }
-  }
-
-  /** Width of a tooltip, as in its CSS. */
-  const TOOLTIP_WIDTH = 280
-
-  /** Places a tooltip below its button before it opens, kept on screen. */
-  function placeTooltip(e: ToggleEvent) {
-    if (e.newState !== 'open') return
-    const tip = e.currentTarget as HTMLElement
-    const button = document.querySelector(`[popovertarget="${tip.id}"]`)
-    if (!button) return
-    const anchor = button.getBoundingClientRect()
-    const width = Math.min(TOOLTIP_WIDTH, innerWidth - 16)
-    const left = Math.min(anchor.left, innerWidth - width - 8)
-    tip.style.left = `${Math.max(8, left)}px`
-    tip.style.top = `${anchor.bottom + 6}px`
   }
 
   const isDefault = (key: keyof typeof DEFAULTS) => settings[key] === DEFAULTS[key]
@@ -126,10 +111,7 @@
     <span class="label">
       <label for="glide-ratio">Glide ratio</label>
       {#if isDefault('glideRatio')}<em>default</em>{/if}
-      {#if collapsible}
-        <button type="button" class="info" popovertarget="glide-ratio-info" aria-label="About the glide ratio">i</button>
-        <span id="glide-ratio-info" class="tooltip" popover onbeforetoggle={placeTooltip}>{EXPLANATIONS.glideRatio}</span>
-      {/if}
+      <InfoTip topic="the glide ratio">{EXPLANATIONS.glideRatio}</InfoTip>
     </span>
     <span class="inputs">
       <input id="glide-ratio" type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
@@ -145,15 +127,11 @@
       />
     </span>
   </div>
-  {#if !collapsible}<p class="explain">{EXPLANATIONS.glideRatio}</p>{/if}
 
   <div class="field">
     <span class="label">
       <label for="start-height">Start height</label>
-      {#if collapsible}
-        <button type="button" class="info" popovertarget="start-height-info" aria-label="About the start height">i</button>
-        <span id="start-height-info" class="tooltip" popover onbeforetoggle={placeTooltip}>{EXPLANATIONS.startHeight}</span>
-      {/if}
+      <InfoTip topic="the start height">{EXPLANATIONS.startHeight}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -171,7 +149,6 @@
       </span>
     </span>
   </div>
-  {#if !collapsible}<p class="explain">{EXPLANATIONS.startHeight}</p>{/if}
 </section>
 
 {@render landing?.()}
@@ -182,10 +159,15 @@
   <section>
     <h2>Assumptions</h2>
 
-    <label class="field">
-      <span class="label">Terrain clearance {#if isDefault('clearance')}<em>default</em>{/if}</span>
+    <div class="field">
+      <span class="label">
+        <label for="clearance">Terrain clearance</label>
+        {#if isDefault('clearance')}<em>default</em>{/if}
+        <InfoTip topic="the terrain clearance">{EXPLANATIONS.clearance}</InfoTip>
+      </span>
       <span class="inputs">
         <input
+          id="clearance"
           type="number"
           step="10"
           min={LIMITS.clearance[0]}
@@ -195,13 +177,17 @@
         />
         <span class="unit">m</span>
       </span>
-    </label>
-    <p class="explain">{EXPLANATIONS.clearance}</p>
+    </div>
 
-    <label class="field">
-      <span class="label">Launch zone {#if isDefault('launchZone')}<em>default</em>{/if}</span>
+    <div class="field">
+      <span class="label">
+        <label for="launch-zone">Launch zone</label>
+        {#if isDefault('launchZone')}<em>default</em>{/if}
+        <InfoTip topic="the launch zone">{EXPLANATIONS.launchZone}</InfoTip>
+      </span>
       <span class="inputs">
         <input
+          id="launch-zone"
           type="number"
           step="50"
           min={LIMITS.launchZone[0]}
@@ -211,13 +197,17 @@
         />
         <span class="unit">m</span>
       </span>
-    </label>
-    <p class="explain">{EXPLANATIONS.launchZone}</p>
+    </div>
 
-    <label class="field">
-      <span class="label">Arrival height {#if isDefault('arrivalHeight')}<em>default</em>{/if}</span>
+    <div class="field">
+      <span class="label">
+        <label for="arrival-height">Arrival height</label>
+        {#if isDefault('arrivalHeight')}<em>default</em>{/if}
+        <InfoTip topic="the arrival height">{EXPLANATIONS.arrivalHeight}</InfoTip>
+      </span>
       <span class="inputs">
         <input
+          id="arrival-height"
           type="number"
           step="10"
           min={LIMITS.arrivalHeight[0]}
@@ -227,23 +217,23 @@
         />
         <span class="unit">m</span>
       </span>
-    </label>
-    <p class="explain">{EXPLANATIONS.arrivalHeight}</p>
+    </div>
 
     <div class="field">
-      <span class="label">Wind</span>
+      <span class="label">Wind <InfoTip topic="wind">{EXPLANATIONS.wind}</InfoTip></span>
       <span class="value warning">Still air</span>
     </div>
-    <p class="explain">{EXPLANATIONS.wind}</p>
 
     <div class="field">
-      <span class="label">Elevation data</span>
+      <span class="label">
+        Elevation data
+        <InfoTip topic="the elevation data">
+          {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so
+          obstacles are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
+        </InfoTip>
+      </span>
       <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
     </div>
-    <p class="explain">
-      {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so obstacles
-      are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
-    </p>
 
     <button
       type="button"
@@ -267,13 +257,17 @@
       </select>
     </label>
     {#if preferences.showSlope}
-      <span class="label">Slope classes</span>
+      <span class="label">
+        Slope classes
+        <InfoTip topic="the slope classes">
+          swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.
+        </InfoTip>
+      </span>
       <ul class="slope-legend">
         {#each SLOPE_OVERLAY.classes as c (c.label)}
           <li><span class="swatch" style:background={c.color}></span>{c.label}</li>
         {/each}
       </ul>
-      <p class="explain">swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.</p>
     {/if}
     <label class="field">
       <span class="label">Colors</span>
@@ -372,36 +366,6 @@
     margin-left: 4px;
   }
 
-  .info {
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    margin-left: 4px;
-    border-radius: 50%;
-    font-size: 11px;
-    font-weight: 600;
-    font-style: italic;
-    line-height: 1;
-    color: var(--text-muted);
-    vertical-align: middle;
-  }
-
-  .tooltip {
-    position: fixed;
-    inset: auto;
-    margin: 0;
-    width: min(280px, calc(100vw - 16px));
-    padding: 8px 10px;
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.4;
-    color: var(--text);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    box-shadow: var(--shadow);
-  }
-
   .value {
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -427,13 +391,6 @@
   }
 
   .unit {
-    color: var(--text-muted);
-  }
-
-  .explain {
-    margin: 0 0 6px;
-    font-size: 12px;
-    line-height: 1.4;
     color: var(--text-muted);
   }
 

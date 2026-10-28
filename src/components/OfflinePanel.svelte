@@ -11,6 +11,7 @@
     type OfflineArea,
   } from '../lib/offline/areas'
   import { AWS_TERRARIUM, SWISS_ARCHIVE, TileLoader } from '../lib/terrain/loader'
+  import InfoTip from './InfoTip.svelte'
 
   interface Props {
     /** Area currently shown on the map. */
@@ -75,13 +76,16 @@
 
 <section>
   <div class="head">
-    <h2>Offline</h2>
+    <h2>
+      Offline
+      <InfoTip topic="offline maps">
+        Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without network
+        in the mountains. OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the
+        swisstopo map.
+      </InfoTip>
+    </h2>
     <span class="status" class:offline={!online}><i aria-hidden="true"></i>{online ? 'Online' : 'Offline'}</span>
   </div>
-  <p class="explain">
-    Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without
-    network in the mountains.
-  </p>
 
   <label class="field">
     <span class="label">Map detail</span>
@@ -142,7 +146,6 @@
   {#if storage}
     <p class="explain">Storage used: {mb(storage.usage)} MB of {mb(storage.quota)} MB available to this app.</p>
   {/if}
-  <p class="explain">OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the swisstopo map.</p>
 </section>
 
 <style>
