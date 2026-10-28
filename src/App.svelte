@@ -347,6 +347,7 @@
         <OfflinePanel
           {view}
           {online}
+          folded={!narrow}
           onshow={(b) => {
             fitTo = { ...b }
             basemap = 'swisstopo'

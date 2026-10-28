@@ -18,9 +18,11 @@
     view: Bounds | null
     online: boolean
     onshow: (bounds: Bounds) => void
+    /** Folds the section behind its heading, closed at first. */
+    folded?: boolean
   }
 
-  let { view, online, onshow }: Props = $props()
+  let { view, online, onshow, folded = false }: Props = $props()
 
   /** Above this, the download is refused: zoom in or lower the detail. */
   const MAX_TILES = 30_000
@@ -74,19 +76,19 @@
   const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 </script>
 
-<section>
-  <div class="head">
-    <h2>
-      Offline
-      <InfoTip topic="offline maps">
-        Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without network
-        in the mountains. OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the
-        swisstopo map.
-      </InfoTip>
-    </h2>
-    <span class="status" class:offline={!online}><i aria-hidden="true"></i>{online ? 'Online' : 'Offline'}</span>
-  </div>
+{#snippet heading()}
+  <h2>
+    Offline
+    <InfoTip topic="offline maps">
+      Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without network
+      in the mountains. OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the
+      swisstopo map.
+    </InfoTip>
+  </h2>
+  <span class="status" class:offline={!online}><i aria-hidden="true"></i>{online ? 'Online' : 'Offline'}</span>
+{/snippet}
 
+{#snippet content()}
   <label class="field">
     <span class="label">Map detail</span>
     <select bind:value={mapMaxZoom} disabled={!!progress}>
@@ -146,9 +148,43 @@
   {#if storage}
     <p class="explain">Storage used: {mb(storage.usage)} MB of {mb(storage.quota)} MB available to this app.</p>
   {/if}
-</section>
+{/snippet}
+
+{#if folded}
+  <details class="fold">
+    <summary class="head">{@render heading()}</summary>
+    <section class="fold-body">{@render content()}</section>
+  </details>
+{:else}
+  <section>
+    <div class="head">{@render heading()}</div>
+    {@render content()}
+  </section>
+{/if}
 
 <style>
+  .fold summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .fold summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .fold summary::after {
+    content: '▾';
+    color: var(--text-muted);
+  }
+
+  .fold[open] summary::after {
+    content: '▴';
+  }
+
+  .fold-body {
+    margin-top: 6px;
+  }
+
   section {
     display: flex;
     flex-direction: column;
