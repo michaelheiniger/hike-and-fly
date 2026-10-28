@@ -93,7 +93,7 @@ export function writeUrl(s: Settings): void {
   // Always written, so a link keeps these when the defaults change.
   p.set('gr', `${s.glideRatio}`)
   p.set('cl', `${s.clearance}`)
-  if (s.launchZone !== DEFAULTS.launchZone) p.set('lz', `${s.launchZone}`)
+  p.set('lz', `${s.launchZone}`)
   if (s.arrivalHeight !== DEFAULTS.arrivalHeight) p.set('ar', `${s.arrivalHeight}`)
   history.replaceState(null, '', `#${p}`)
 }
