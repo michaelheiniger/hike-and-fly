@@ -15,15 +15,13 @@
     basemap: BasemapId
     /** Rendered after the glide inputs (the landing and its routes), always visible. */
     landing?: Snippet
-    /** Rendered between the landing and the assumptions (the legend), always visible. */
-    legend?: Snippet
     /** Rendered after the settings, inside the fold when collapsible. */
     footer?: Snippet
-    /** Folds the settings below the legend behind a summary line (narrow screens). */
+    /** Folds the settings below the landing behind a summary line (narrow screens). */
     collapsible?: boolean
   }
 
-  let { result, elevationSource, computing, error, basemap = $bindable(), landing, legend, footer, collapsible = false }: Props = $props()
+  let { result, elevationSource, computing, error, basemap = $bindable(), landing, footer, collapsible = false }: Props = $props()
 
   const ground = $derived(result?.startElevation ?? null)
 
@@ -152,8 +150,6 @@
 </section>
 
 {@render landing?.()}
-
-{@render legend?.()}
 
 {#snippet settingsBody()}
   <section>

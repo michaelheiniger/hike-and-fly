@@ -343,11 +343,6 @@
           <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
         {/if}
       {/snippet}
-      {#snippet legend()}
-        {#if reach}
-          <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
-        {/if}
-      {/snippet}
       {#snippet footer()}
         <OfflinePanel
           {view}
@@ -363,6 +358,12 @@
 
   {#if !narrow}
     {@render profile('profile-card')}
+  {/if}
+
+  {#if reach}
+    <div class="legend">
+      <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
+    </div>
   {/if}
 
   {#if activity}
@@ -474,10 +475,18 @@
   }
 
   /* Shown only when work takes a moment, so quick updates do not flicker. */
+  /* Right of the panel; on narrow screens in the map's top-left corner. */
+  .legend {
+    position: absolute;
+    top: 12px;
+    left: 344px;
+  }
+
   .activity {
     position: absolute;
     top: 12px;
-    left: 50%;
+    /* Centered in the map area right of the panel. */
+    left: calc(50% + 166px);
     transform: translateX(-50%);
     display: flex;
     align-items: center;
@@ -554,6 +563,18 @@
 
     .readout {
       display: none;
+    }
+
+    .legend {
+      top: 10px;
+      left: 10px;
+    }
+
+    /* Above the panel, clear of the legend. */
+    .activity {
+      top: auto;
+      bottom: calc(var(--panel-height) + 12px);
+      left: 50%;
     }
 
     /* Drag handle: stays at the top while the panel scrolls. */

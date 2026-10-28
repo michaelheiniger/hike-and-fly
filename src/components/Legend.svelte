@@ -4,8 +4,8 @@
   let { bands, launchZone }: { bands: AglBand[]; launchZone: number } = $props()
 </script>
 
-<section>
-  <h2>Height above ground</h2>
+<details open>
+  <summary>Height above ground</summary>
   <ul>
     {#each [...bands].reverse() as band (band.from)}
       <li>
@@ -20,20 +20,45 @@
       </li>
     {/if}
   </ul>
-</section>
+</details>
 
 <style>
-  h2 {
+  details {
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 8px 12px;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-muted);
-    margin: 0 0 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: '▾';
+    margin-left: auto;
+  }
+
+  details[open] summary::after {
+    content: '▴';
   }
 
   ul {
     list-style: none;
-    margin: 0;
+    margin: 6px 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
