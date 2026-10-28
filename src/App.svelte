@@ -38,6 +38,8 @@
   narrowQuery.addEventListener('change', (e) => (narrow = e.matches))
   /** Height of the panel, which sits below the map on narrow screens. */
   let panelHeight = $state(0)
+  /** Panel height set by dragging its handle; null fits the content. */
+  let panelSize = $state<number | null>(null)
   let hover = $state<LngLat | null>(null)
   let view = $state<Bounds | null>(null)
   let fitTo = $state<Bounds | null>(null)
@@ -187,6 +189,32 @@
     return JSON.stringify(rest)
   }
 
+  /** Keeps a dragged panel between its handle and most of the screen. */
+  const clampPanel = (h: number) => Math.round(Math.min(innerHeight * 0.85, Math.max(48, h)))
+
+  function dragPanel(e: PointerEvent) {
+    const handle = e.currentTarget as HTMLElement
+    handle.setPointerCapture(e.pointerId)
+    const startY = e.clientY
+    const startHeight = panelHeight
+    const move = (m: PointerEvent) => (panelSize = clampPanel(startHeight + startY - m.clientY))
+    const end = () => {
+      handle.removeEventListener('pointermove', move)
+      handle.removeEventListener('pointerup', end)
+      handle.removeEventListener('pointercancel', end)
+    }
+    handle.addEventListener('pointermove', move)
+    handle.addEventListener('pointerup', end)
+    handle.addEventListener('pointercancel', end)
+  }
+
+  function resizePanelKey(e: KeyboardEvent) {
+    const step = e.key === 'ArrowUp' ? 40 : e.key === 'ArrowDown' ? -40 : 0
+    if (!step) return
+    e.preventDefault()
+    panelSize = clampPanel(panelHeight + step)
+  }
+
   function pick(p: LngLat) {
     if (clickSets === 'landing') {
       settings.landing = p
@@ -235,7 +263,26 @@
     onhover={(p) => (hover = p)}
   />
 
-  <aside class="panel" bind:offsetHeight={panelHeight}>
+  <aside
+    class="panel"
+    bind:offsetHeight={panelHeight}
+    style:height={narrow && panelSize !== null ? `${panelSize}px` : null}
+    style:max-height={narrow && panelSize !== null ? 'none' : null}
+  >
+    {#if narrow}
+      <!-- A focusable separator is a widget, which the a11y lint does not know. -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div
+        class="handle"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize panel (double-click to fit the content)"
+        tabindex="0"
+        onpointerdown={dragPanel}
+        ondblclick={() => (panelSize = null)}
+        onkeydown={resizePanelKey}
+      ></div>
+    {/if}
     <header>
       <h1>
         Hike &amp; Fly Planner
@@ -446,6 +493,29 @@
 
     .readout {
       display: none;
+    }
+
+    /* Drag handle: stays at the top while the panel scrolls. */
+    .handle {
+      position: sticky;
+      top: -12px;
+      z-index: 1;
+      flex-shrink: 0;
+      margin: -12px -16px -8px;
+      padding: 8px 0 10px;
+      background: var(--surface);
+      cursor: ns-resize;
+      touch-action: none;
+    }
+
+    .handle::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      margin: 0 auto;
+      border-radius: 2px;
+      background: var(--border);
     }
 
   }
