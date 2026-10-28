@@ -51,13 +51,15 @@
   let container: HTMLDivElement
   let map: Map | undefined = $state()
   let loaded = $state(false)
+  /** The map could not start, usually because WebGL is unavailable. */
+  let failed = $state(false)
   let routeBadges: Marker[] = []
   let startMarker: Marker | undefined
   let landingMarker: Marker | undefined
 
-  onMount(() => {
-    setWorkerUrl(maplibreWorkerUrl)
-    const m = new Map({
+  /** Throws when the browser cannot create a WebGL context. */
+  function createMap(): Map {
+    return new Map({
       container,
       style: initialStyle(),
       center: start ? [start.lng, start.lat] : [8.2, 46.8],
@@ -65,6 +67,18 @@
       maxZoom: 18,
       attributionControl: { compact: true, customAttribution: [SWISS_ARCHIVE.attribution, AWS_TERRARIUM.attribution] },
     })
+  }
+
+  onMount(() => {
+    setWorkerUrl(maplibreWorkerUrl)
+    let m: Map
+    try {
+      m = createMap()
+    } catch (err) {
+      console.error(err)
+      failed = true
+      return
+    }
     m.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     m.addControl(new ScaleControl({ unit: 'metric' }), 'top-right')
     m.on('load', () => {
@@ -266,9 +280,19 @@
 </script>
 
 <div class="map" bind:this={container}></div>
-<button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
-  Slopes &gt; 30°
-</button>
+{#if failed}
+  <div class="map-failed" role="alert">
+    <strong>The map cannot be displayed</strong>
+    <p>
+      This browser could not start WebGL, which the map needs. Turn on hardware acceleration in the browser settings, or
+      try another browser.
+    </p>
+  </div>
+{:else}
+  <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
+    Slopes &gt; 30°
+  </button>
+{/if}
 
 <style>
   .map :global(.route-badge) {
@@ -294,6 +318,24 @@
   .map {
     position: absolute;
     inset: 0;
+  }
+
+  .map-failed {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100% - 32px));
+    padding: 14px 16px;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .map-failed p {
+    margin: 6px 0 0;
+    color: var(--text-muted);
   }
 
   .layer-toggle {
