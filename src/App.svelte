@@ -363,7 +363,8 @@
 
   {#if reach}
     <div class="legend">
-      <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
+      <!-- Folded at first on narrow screens, where it would cover much of the map. -->
+      <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} open={!narrow} />
     </div>
   {/if}
 

@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { AglBand } from '../lib/render/agl'
 
-  let { bands, launchZone }: { bands: AglBand[]; launchZone: number } = $props()
+  /** `open`: unfolded at first. */
+  let { bands, launchZone, open = true }: { bands: AglBand[]; launchZone: number; open?: boolean } = $props()
 </script>
 
-<details open>
+<details {open}>
   <summary>Height above ground</summary>
   <ul>
     {#each [...bands].reverse() as band (band.from)}
