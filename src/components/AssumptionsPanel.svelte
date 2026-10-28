@@ -51,6 +51,22 @@
     }
   }
 
+  /** Width of a tooltip, as in its CSS. */
+  const TOOLTIP_WIDTH = 280
+
+  /** Places a tooltip below its button before it opens, kept on screen. */
+  function placeTooltip(e: ToggleEvent) {
+    if (e.newState !== 'open') return
+    const tip = e.currentTarget as HTMLElement
+    const button = document.querySelector(`[popovertarget="${tip.id}"]`)
+    if (!button) return
+    const anchor = button.getBoundingClientRect()
+    const width = Math.min(TOOLTIP_WIDTH, innerWidth - 16)
+    const left = Math.min(anchor.left, innerWidth - width - 8)
+    tip.style.left = `${Math.max(8, left)}px`
+    tip.style.top = `${anchor.bottom + 6}px`
+  }
+
   const isDefault = (key: keyof typeof DEFAULTS) => settings[key] === DEFAULTS[key]
 </script>
 
@@ -123,10 +139,17 @@
   </label>
   {#if !collapsible}<p class="explain">{EXPLANATIONS.glideRatio}</p>{/if}
 
-  <label class="field">
-    <span class="label">Start height</span>
+  <div class="field">
+    <span class="label">
+      <label for="start-height">Start height</label>
+      {#if collapsible}
+        <button type="button" class="info" popovertarget="start-height-info" aria-label="About the start height">i</button>
+        <span id="start-height-info" class="tooltip" popover onbeforetoggle={placeTooltip}>{EXPLANATIONS.startHeight}</span>
+      {/if}
+    </span>
     <span class="inputs">
       <input
+        id="start-height"
         type="number"
         step="50"
         min={LIMITS.startHeight[0]}
@@ -139,7 +162,7 @@
         <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
       </span>
     </span>
-  </label>
+  </div>
   {#if !collapsible}<p class="explain">{EXPLANATIONS.startHeight}</p>{/if}
 </section>
 
@@ -342,6 +365,36 @@
     border-radius: 4px;
     padding: 0 4px;
     margin-left: 4px;
+  }
+
+  .info {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    margin-left: 4px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    font-style: italic;
+    line-height: 1;
+    color: var(--text-muted);
+    vertical-align: middle;
+  }
+
+  .tooltip {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    width: min(280px, calc(100vw - 16px));
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
   }
 
   .value {
