@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte'
   import type { ReachResult } from '../lib/compute/reach'
   import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
-  import { DEFAULTS, EXPLANATIONS, LIMITS, preferences, settings } from '../lib/settings.svelte'
+  import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
 
   interface Props {
@@ -38,10 +38,14 @@
   /** Number input handler that ignores incomplete values and clamps to limits. */
   function numberInput(key: keyof typeof LIMITS) {
     return (e: Event) => {
-      const v = (e.currentTarget as HTMLInputElement).valueAsNumber
+      const input = e.currentTarget as HTMLInputElement
+      const v = input.valueAsNumber
       if (!Number.isFinite(v)) return
       const [lo, hi] = LIMITS[key]
-      settings[key] = Math.min(hi, Math.max(lo, v))
+      const clamped = Math.min(hi, Math.max(lo, v))
+      settings[key] = key === 'glideRatio' ? roundGlideRatio(clamped) : clamped
+      // Show the value used, also when it equals the previous one and nothing rerenders.
+      input.value = String(settings[key])
     }
   }
 
@@ -123,11 +127,11 @@
     <label class="field">
       <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
       <span class="inputs">
-        <input type="range" min="3" max="12" step="0.1" bind:value={settings.glideRatio} />
+        <input type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
         <input
           type="number"
           class="narrow"
-          step="0.1"
+          step={GLIDE_STEP}
           min={LIMITS.glideRatio[0]}
           max={LIMITS.glideRatio[1]}
           value={settings.glideRatio}

@@ -48,6 +48,10 @@ export const LIMITS = {
 
 const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, v))
 
+/** The glide ratio is set in half steps. */
+export const GLIDE_STEP = 0.5
+export const roundGlideRatio = (v: number) => Math.round(v / GLIDE_STEP) * GLIDE_STEP
+
 function readUrl(): Settings {
   const p = new URLSearchParams(location.hash.slice(1))
   const num = (key: string, fallback: number, limits: readonly [number, number]) => {
@@ -65,7 +69,7 @@ function readUrl(): Settings {
     landing: point('llat', 'llng'),
     startHeight: num('h', DEFAULTS.startHeight, LIMITS.startHeight),
     startHeightMode: p.get('hm') === 'amsl' ? 'amsl' : 'agl',
-    glideRatio: num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio),
+    glideRatio: roundGlideRatio(num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio)),
     clearance: num('cl', DEFAULTS.clearance, LIMITS.clearance),
     launchZone: num('lz', DEFAULTS.launchZone, LIMITS.launchZone),
     arrivalHeight: num('ar', DEFAULTS.arrivalHeight, LIMITS.arrivalHeight),
