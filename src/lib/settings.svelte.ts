@@ -16,7 +16,7 @@ export interface Settings {
 export const DEFAULTS: Omit<Settings, 'start' | 'landing'> = {
   startHeight: 0,
   startHeightMode: 'agl',
-  glideRatio: 7,
+  glideRatio: 5,
   clearance: 100,
   launchZone: 500,
   arrivalHeight: 100,
@@ -27,7 +27,7 @@ export const EXPLANATIONS = {
   startHeight:
     'Height at the start. 0 m AGL is a ground launch. Use a higher value to plan a final glide after climbing in a thermal.',
   glideRatio:
-    'Still-air glide ratio. 7 is realistic for a light hike & fly wing at trim — below the brochure value, which assumes perfect conditions.',
+    'Still-air glide ratio. The default of 5 is pessimistic on purpose: a light hike & fly wing does about 7 at trim, and the margin covers sinking air and headwind.',
   clearance:
     'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (lowest legend band) are reachable as a final glide only.',
   launchZone:
