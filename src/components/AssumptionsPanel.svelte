@@ -122,13 +122,21 @@
 <section>
   <h2>Glide</h2>
 
-  <label class="field">
-    <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
+  <div class="field">
+    <span class="label">
+      <label for="glide-ratio">Glide ratio</label>
+      {#if isDefault('glideRatio')}<em>default</em>{/if}
+      {#if collapsible}
+        <button type="button" class="info" popovertarget="glide-ratio-info" aria-label="About the glide ratio">i</button>
+        <span id="glide-ratio-info" class="tooltip" popover onbeforetoggle={placeTooltip}>{EXPLANATIONS.glideRatio}</span>
+      {/if}
+    </span>
     <span class="inputs">
-      <input type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
+      <input id="glide-ratio" type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
       <input
         type="number"
         class="narrow"
+        aria-label="Glide ratio"
         step={GLIDE_STEP}
         min={LIMITS.glideRatio[0]}
         max={LIMITS.glideRatio[1]}
@@ -136,7 +144,7 @@
         onchange={numberInput('glideRatio')}
       />
     </span>
-  </label>
+  </div>
   {#if !collapsible}<p class="explain">{EXPLANATIONS.glideRatio}</p>{/if}
 
   <div class="field">
