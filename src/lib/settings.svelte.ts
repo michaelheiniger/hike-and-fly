@@ -86,15 +86,13 @@ export function writeUrl(s: Settings): void {
     p.set('llat', s.landing.lat.toFixed(5))
     p.set('llng', s.landing.lng.toFixed(5))
   }
-  if (s.startHeight !== DEFAULTS.startHeight || s.startHeightMode !== DEFAULTS.startHeightMode) {
-    p.set('h', `${s.startHeight}`)
-    p.set('hm', s.startHeightMode)
-  }
-  // Always written, so a link keeps these when the defaults change.
+  // Every setting is written, so a link keeps its values when the defaults change.
+  p.set('h', `${s.startHeight}`)
+  p.set('hm', s.startHeightMode)
   p.set('gr', `${s.glideRatio}`)
   p.set('cl', `${s.clearance}`)
   p.set('lz', `${s.launchZone}`)
-  if (s.arrivalHeight !== DEFAULTS.arrivalHeight) p.set('ar', `${s.arrivalHeight}`)
+  p.set('ar', `${s.arrivalHeight}`)
   history.replaceState(null, '', `#${p}`)
 }
 
