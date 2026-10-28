@@ -274,22 +274,30 @@
       <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
     {/if}
 
-    <AssumptionsPanel result={reach} {elevationSource} computing={busy.reach} error={reachError} bind:basemap>
+    <AssumptionsPanel
+      result={reach}
+      {elevationSource}
+      computing={busy.reach}
+      error={reachError}
+      collapsible={narrow}
+      bind:basemap
+    >
       {#snippet legend()}
         {#if reach}
           <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
         {/if}
       {/snippet}
+      {#snippet footer()}
+        <OfflinePanel
+          {view}
+          {online}
+          onshow={(b) => {
+            fitTo = { ...b }
+            basemap = 'swisstopo'
+          }}
+        />
+      {/snippet}
     </AssumptionsPanel>
-
-    <OfflinePanel
-      {view}
-      {online}
-      onshow={(b) => {
-        fitTo = { ...b }
-        basemap = 'swisstopo'
-      }}
-    />
   </aside>
 
   {#if !narrow}

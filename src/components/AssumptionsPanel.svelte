@@ -14,9 +14,13 @@
     basemap: BasemapId
     /** Rendered between the glide inputs and the assumptions (the legend). */
     legend?: Snippet
+    /** Rendered after the settings, inside the fold when collapsible. */
+    footer?: Snippet
+    /** Folds the settings behind a summary line (narrow screens), the legend above it. */
+    collapsible?: boolean
   }
 
-  let { result, elevationSource, computing, error, basemap = $bindable(), legend }: Props = $props()
+  let { result, elevationSource, computing, error, basemap = $bindable(), legend, footer, collapsible = false }: Props = $props()
 
   const ground = $derived(result?.startElevation ?? null)
 
@@ -93,157 +97,209 @@
   </div>
 </section>
 
-<section>
-  <h2>Glide</h2>
+{#snippet settingsBody()}
+  <section>
+    <h2>Glide</h2>
 
-  <label class="field">
-    <span class="label">Start height</span>
-    <span class="inputs">
-      <input
-        type="number"
-        step="50"
-        min={LIMITS.startHeight[0]}
-        max={LIMITS.startHeight[1]}
-        value={settings.startHeight}
-        onchange={numberInput('startHeight')}
-      />
-      <span class="segmented" role="group" aria-label="Height reference">
-        <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>AGL</button>
-        <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
+    <label class="field">
+      <span class="label">Start height</span>
+      <span class="inputs">
+        <input
+          type="number"
+          step="50"
+          min={LIMITS.startHeight[0]}
+          max={LIMITS.startHeight[1]}
+          value={settings.startHeight}
+          onchange={numberInput('startHeight')}
+        />
+        <span class="segmented" role="group" aria-label="Height reference">
+          <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>AGL</button>
+          <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
+        </span>
       </span>
-    </span>
-  </label>
-  <p class="explain">{EXPLANATIONS.startHeight}</p>
+    </label>
+    <p class="explain">{EXPLANATIONS.startHeight}</p>
 
-  <label class="field">
-    <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
-    <span class="inputs">
-      <input type="range" min="3" max="12" step="0.1" bind:value={settings.glideRatio} />
-      <input
-        type="number"
-        class="narrow"
-        step="0.1"
-        min={LIMITS.glideRatio[0]}
-        max={LIMITS.glideRatio[1]}
-        value={settings.glideRatio}
-        onchange={numberInput('glideRatio')}
-      />
-    </span>
-  </label>
-  <p class="explain">{EXPLANATIONS.glideRatio}</p>
-</section>
+    <label class="field">
+      <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
+      <span class="inputs">
+        <input type="range" min="3" max="12" step="0.1" bind:value={settings.glideRatio} />
+        <input
+          type="number"
+          class="narrow"
+          step="0.1"
+          min={LIMITS.glideRatio[0]}
+          max={LIMITS.glideRatio[1]}
+          value={settings.glideRatio}
+          onchange={numberInput('glideRatio')}
+        />
+      </span>
+    </label>
+    <p class="explain">{EXPLANATIONS.glideRatio}</p>
+  </section>
 
-{@render legend?.()}
+  {#if !collapsible}{@render legend?.()}{/if}
 
-<section>
-  <h2>Assumptions</h2>
+  <section>
+    <h2>Assumptions</h2>
 
-  <label class="field">
-    <span class="label">Terrain clearance {#if isDefault('clearance')}<em>default</em>{/if}</span>
-    <span class="inputs">
-      <input
-        type="number"
-        step="10"
-        min={LIMITS.clearance[0]}
-        max={LIMITS.clearance[1]}
-        value={settings.clearance}
-        onchange={numberInput('clearance')}
-      />
-      <span class="unit">m</span>
-    </span>
-  </label>
-  <p class="explain">{EXPLANATIONS.clearance}</p>
+    <label class="field">
+      <span class="label">Terrain clearance {#if isDefault('clearance')}<em>default</em>{/if}</span>
+      <span class="inputs">
+        <input
+          type="number"
+          step="10"
+          min={LIMITS.clearance[0]}
+          max={LIMITS.clearance[1]}
+          value={settings.clearance}
+          onchange={numberInput('clearance')}
+        />
+        <span class="unit">m</span>
+      </span>
+    </label>
+    <p class="explain">{EXPLANATIONS.clearance}</p>
 
-  <label class="field">
-    <span class="label">Launch zone {#if isDefault('launchZone')}<em>default</em>{/if}</span>
-    <span class="inputs">
-      <input
-        type="number"
-        step="50"
-        min={LIMITS.launchZone[0]}
-        max={LIMITS.launchZone[1]}
-        value={settings.launchZone}
-        onchange={numberInput('launchZone')}
-      />
-      <span class="unit">m</span>
-    </span>
-  </label>
-  <p class="explain">{EXPLANATIONS.launchZone}</p>
+    <label class="field">
+      <span class="label">Launch zone {#if isDefault('launchZone')}<em>default</em>{/if}</span>
+      <span class="inputs">
+        <input
+          type="number"
+          step="50"
+          min={LIMITS.launchZone[0]}
+          max={LIMITS.launchZone[1]}
+          value={settings.launchZone}
+          onchange={numberInput('launchZone')}
+        />
+        <span class="unit">m</span>
+      </span>
+    </label>
+    <p class="explain">{EXPLANATIONS.launchZone}</p>
 
-  <label class="field">
-    <span class="label">Arrival height {#if isDefault('arrivalHeight')}<em>default</em>{/if}</span>
-    <span class="inputs">
-      <input
-        type="number"
-        step="10"
-        min={LIMITS.arrivalHeight[0]}
-        max={LIMITS.arrivalHeight[1]}
-        value={settings.arrivalHeight}
-        onchange={numberInput('arrivalHeight')}
-      />
-      <span class="unit">m</span>
-    </span>
-  </label>
-  <p class="explain">{EXPLANATIONS.arrivalHeight}</p>
+    <label class="field">
+      <span class="label">Arrival height {#if isDefault('arrivalHeight')}<em>default</em>{/if}</span>
+      <span class="inputs">
+        <input
+          type="number"
+          step="10"
+          min={LIMITS.arrivalHeight[0]}
+          max={LIMITS.arrivalHeight[1]}
+          value={settings.arrivalHeight}
+          onchange={numberInput('arrivalHeight')}
+        />
+        <span class="unit">m</span>
+      </span>
+    </label>
+    <p class="explain">{EXPLANATIONS.arrivalHeight}</p>
 
-  <div class="field">
-    <span class="label">Wind</span>
-    <span class="value warning">Still air</span>
-  </div>
-  <p class="explain">{EXPLANATIONS.wind}</p>
+    <div class="field">
+      <span class="label">Wind</span>
+      <span class="value warning">Still air</span>
+    </div>
+    <p class="explain">{EXPLANATIONS.wind}</p>
 
-  <div class="field">
-    <span class="label">Elevation data</span>
-    <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
-  </div>
-  <p class="explain">
-    {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so obstacles
-    are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
-  </p>
+    <div class="field">
+      <span class="label">Elevation data</span>
+      <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
+    </div>
+    <p class="explain">
+      {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so obstacles
+      are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
+    </p>
 
-  <button
-    type="button"
-    class="link"
-    onclick={() => {
-      settings.glideRatio = DEFAULTS.glideRatio
-      settings.clearance = DEFAULTS.clearance
-      settings.launchZone = DEFAULTS.launchZone
-      settings.arrivalHeight = DEFAULTS.arrivalHeight
-    }}>Reset to defaults</button
-  >
-</section>
+    <button
+      type="button"
+      class="link"
+      onclick={() => {
+        settings.glideRatio = DEFAULTS.glideRatio
+        settings.clearance = DEFAULTS.clearance
+        settings.launchZone = DEFAULTS.launchZone
+        settings.arrivalHeight = DEFAULTS.arrivalHeight
+      }}>Reset to defaults</button
+    >
+  </section>
 
-<section>
-  <label class="field">
-    <span class="label">Map</span>
-    <select bind:value={basemap}>
-      {#each Object.entries(BASEMAPS) as [id, b] (id)}
-        <option value={id}>{b.label}</option>
-      {/each}
-    </select>
-  </label>
-  <label class="toggle">
-    <input type="checkbox" bind:checked={preferences.showSlope} />
-    <span class="label">Slope classes over 30°</span>
-  </label>
-  {#if preferences.showSlope}
-    <ul class="slope-legend">
-      {#each SLOPE_OVERLAY.classes as c (c.label)}
-        <li><span class="swatch" style:background={c.color}></span>{c.label}</li>
-      {/each}
-    </ul>
-    <p class="explain">swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.</p>
-  {/if}
-  <label class="field">
-    <span class="label">Colors</span>
-    <select bind:value={preferences.colorScheme}>
-      <option value="standard">Red to green</option>
-      <option value="colorblind">Color-blind friendly</option>
-    </select>
-  </label>
-</section>
+  <section>
+    <label class="field">
+      <span class="label">Map</span>
+      <select bind:value={basemap}>
+        {#each Object.entries(BASEMAPS) as [id, b] (id)}
+          <option value={id}>{b.label}</option>
+        {/each}
+      </select>
+    </label>
+    <label class="toggle">
+      <input type="checkbox" bind:checked={preferences.showSlope} />
+      <span class="label">Slope classes over 30°</span>
+    </label>
+    {#if preferences.showSlope}
+      <ul class="slope-legend">
+        {#each SLOPE_OVERLAY.classes as c (c.label)}
+          <li><span class="swatch" style:background={c.color}></span>{c.label}</li>
+        {/each}
+      </ul>
+      <p class="explain">swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.</p>
+    {/if}
+    <label class="field">
+      <span class="label">Colors</span>
+      <select bind:value={preferences.colorScheme}>
+        <option value="standard">Red to green</option>
+        <option value="colorblind">Color-blind friendly</option>
+      </select>
+    </label>
+  </section>
+
+  {@render footer?.()}
+{/snippet}
+
+{#if collapsible}
+  {@render legend?.()}
+  <details class="settings">
+    <summary>
+      <span class="label">Settings</span>
+      <span class="muted small">
+        Glide {settings.glideRatio} · {settings.startHeight} m {settings.startHeightMode.toUpperCase()}
+      </span>
+    </summary>
+    <div class="settings-body">{@render settingsBody()}</div>
+  </details>
+{:else}
+  {@render settingsBody()}
+{/if}
 
 <style>
+  .settings summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .settings summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .settings summary::after {
+    content: '▾';
+    color: var(--text-muted);
+  }
+
+  .settings[open] summary::after {
+    content: '▴';
+  }
+
+  .settings summary .muted {
+    margin-left: auto;
+  }
+
+  .settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 12px;
+  }
+
   section {
     display: flex;
     flex-direction: column;
