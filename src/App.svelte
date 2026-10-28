@@ -36,6 +36,8 @@
   const narrowQuery = matchMedia('(max-width: 640px)')
   let narrow = $state(narrowQuery.matches)
   narrowQuery.addEventListener('change', (e) => (narrow = e.matches))
+  /** Height of the panel, which sits below the map on narrow screens. */
+  let panelHeight = $state(0)
   let hover = $state<LngLat | null>(null)
   let view = $state<Bounds | null>(null)
   let fitTo = $state<Bounds | null>(null)
@@ -214,7 +216,7 @@
   {/if}
 {/snippet}
 
-<main>
+<main style:--panel-height="{panelHeight}px">
   <MapView
     start={settings.start}
     landing={settings.landing}
@@ -233,7 +235,7 @@
     onhover={(p) => (hover = p)}
   />
 
-  <aside class="panel">
+  <aside class="panel" bind:offsetHeight={panelHeight}>
     <header>
       <h1>
         Hike &amp; Fly Planner
@@ -426,9 +428,9 @@
   }
 
   @media (max-width: 640px) {
-    /* Map above, panel below: map controls stay visible. */
+    /* Map above, panel below: map controls stay visible. The panel is as tall as its content. */
     main :global(.map) {
-      bottom: 45%;
+      bottom: var(--panel-height);
     }
 
     .panel {
@@ -437,8 +439,7 @@
       left: 0;
       right: 0;
       width: auto;
-      height: 45%;
-      max-height: none;
+      max-height: 45%;
       border-radius: 12px 12px 0 0;
       padding: 12px 16px;
     }
