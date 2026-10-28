@@ -6,6 +6,8 @@ export type ReachOutcome = { result: ReachResult; elevationSource: string } | { 
 export type RouteOutcome = { result: RouteResult } | { error: string }
 
 type Kind = WorkerRequest['kind']
+/** Kinds of computation queued or running, and whether elevation data is loading. */
+export type Busy = Record<Kind, boolean> & { loading: boolean }
 type Pending =
   | { kind: 'reach'; request: ReachRequest }
   | { kind: 'route' | 'alternatives'; request: RouteRequest }
@@ -15,7 +17,7 @@ export interface PlannerCallbacks {
   /** Route results arrive twice: the best route first, then with alternatives. */
   onRoute: (outcome: RouteOutcome, request: RouteRequest) => void
   /** Called whenever the set of busy kinds changes. */
-  onBusy?: (busy: Record<Kind, boolean>) => void
+  onBusy?: (busy: Busy) => void
 }
 
 /**
@@ -27,6 +29,7 @@ export class PlannerClient {
   private nextId = 1
   private current: Pending | null = null
   private queued = new Map<Kind, Pending>()
+  private loading = false
   private callbacks: PlannerCallbacks
 
   constructor(callbacks: PlannerCallbacks) {
@@ -64,6 +67,11 @@ export class PlannerClient {
   }
 
   private receive(message: WorkerResponse): void {
+    if (message.type === 'loading') {
+      this.loading = message.active
+      this.notifyBusy()
+      return
+    }
     const done = this.current!
     this.current = null
     this.sendNext()
@@ -88,7 +96,7 @@ export class PlannerClient {
   }
 
   private notifyBusy(): void {
-    const busy = { reach: false, route: false, alternatives: false }
+    const busy = { reach: false, route: false, alternatives: false, loading: this.loading }
     if (this.current) busy[this.current.kind] = true
     for (const kind of this.queued.keys()) busy[kind] = true
     this.callbacks.onBusy?.(busy)

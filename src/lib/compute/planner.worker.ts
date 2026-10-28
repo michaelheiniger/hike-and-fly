@@ -6,8 +6,18 @@ import { computeReach } from './reach'
 import { RoutePlanner } from './route'
 import type { GridOptions, LoadTiles } from './terrain'
 
+const post = (message: WorkerResponse, transfer: Transferable[] = []) => self.postMessage(message, transfer)
+
 const loader = new TileLoader(AWS_TERRARIUM, SWISS_ARCHIVE.url)
-const loadTiles: LoadTiles = (z, coords) => loader.load(z, coords)
+let loading = 0
+const loadTiles: LoadTiles = async (z, coords) => {
+  if (loading++ === 0) post({ type: 'loading', active: true })
+  try {
+    return await loader.load(z, coords)
+  } finally {
+    if (--loading === 0) post({ type: 'loading', active: false })
+  }
+}
 
 /** Exact elevation from the swisstopo height service (Switzerland, online only). */
 async function swissPointElevation(p: LngLat): Promise<number | null> {
@@ -28,8 +38,6 @@ const ready = loader.info.then((info) => {
   options.maxZoom = info.maxZoom
   return info
 })
-
-const post = (message: WorkerResponse, transfer: Transferable[] = []) => self.postMessage(message, transfer)
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const message = event.data

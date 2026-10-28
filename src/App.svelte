@@ -7,7 +7,7 @@
   import RouteSummary from './components/RouteSummary.svelte'
   import OfflinePanel from './components/OfflinePanel.svelte'
   import type { Bounds } from './lib/offline/areas'
-  import { PlannerClient } from './lib/compute/client'
+  import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import type { BasemapId } from './lib/map/style'
@@ -28,7 +28,7 @@
   let routeRequest = $state.raw<RouteRequest | null>(null)
   let routeError = $state<string | null>(null)
 
-  let busy = $state({ reach: false, route: false, alternatives: false })
+  let busy = $state<Busy>({ reach: false, route: false, alternatives: false, loading: false })
   /** Route picked by the pilot; null picks automatically. */
   let selectedRoute = $state<number | null>(null)
 
@@ -165,6 +165,19 @@
     void shownRoute
     highlight = null
   })
+
+  /** What the worker is doing, for the loading indicator; null when idle. */
+  const activity = $derived(
+    !busy.reach && !busy.route && !busy.alternatives
+      ? null
+      : busy.loading
+        ? 'Loading elevation data…'
+        : busy.reach
+          ? 'Computing reachable area…'
+          : busy.route
+            ? 'Computing routes…'
+            : 'Looking for alternative routes…',
+  )
 
   /** Readout under the cursor: AGL, altitude and distance flown. */
   const readout = $derived.by(() => {
@@ -352,6 +365,13 @@
     {@render profile('profile-card')}
   {/if}
 
+  {#if activity}
+    <div class="activity" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      {activity}
+    </div>
+  {/if}
+
   {#if readout && !shownRoute}
     <div class="readout" role="status">
       {#if readout.reachable && readout.launchZone}
@@ -451,6 +471,47 @@
     border-radius: 10px;
     box-shadow: var(--shadow);
     padding: 10px 14px 6px;
+  }
+
+  /* Shown only when work takes a moment, so quick updates do not flicker. */
+  .activity {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 6px 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    animation: appear 0.15s 0.3s forwards;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes appear {
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .readout {
