@@ -12,7 +12,9 @@
     computing: boolean
     error: string | null
     basemap: BasemapId
-    /** Rendered between the glide inputs and the assumptions (the legend), always visible. */
+    /** Rendered after the glide inputs (the landing and its routes), always visible. */
+    landing?: Snippet
+    /** Rendered between the landing and the assumptions (the legend), always visible. */
     legend?: Snippet
     /** Rendered after the settings, inside the fold when collapsible. */
     footer?: Snippet
@@ -20,7 +22,7 @@
     collapsible?: boolean
   }
 
-  let { result, elevationSource, computing, error, basemap = $bindable(), legend, footer, collapsible = false }: Props = $props()
+  let { result, elevationSource, computing, error, basemap = $bindable(), landing, legend, footer, collapsible = false }: Props = $props()
 
   const ground = $derived(result?.startElevation ?? null)
 
@@ -140,6 +142,8 @@
   </label>
   {#if !collapsible}<p class="explain">{EXPLANATIONS.startHeight}</p>{/if}
 </section>
+
+{@render landing?.()}
 
 {@render legend?.()}
 

@@ -299,28 +299,6 @@
       {/if}
     </header>
 
-    {#if settings.landing}
-      <RouteSummary
-        result={route}
-        computing={busy.route}
-        searchingAlternatives={busy.alternatives}
-        error={routeError}
-        glideRatio={judgedRatio}
-        arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
-        selected={shownRoute?.id ?? null}
-        onselect={(id) => (selectedRoute = id)}
-        onclear={() => {
-          settings.landing = null
-          clickSets = 'landing'
-        }}
-      />
-      {#if narrow}
-        {@render profile('profile-inline')}
-      {/if}
-    {:else if settings.start}
-      <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
-    {/if}
-
     <AssumptionsPanel
       result={reach}
       {elevationSource}
@@ -329,6 +307,29 @@
       collapsible={narrow}
       bind:basemap
     >
+      {#snippet landing()}
+        {#if settings.landing}
+          <RouteSummary
+            result={route}
+            computing={busy.route}
+            searchingAlternatives={busy.alternatives}
+            error={routeError}
+            glideRatio={judgedRatio}
+            arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
+            selected={shownRoute?.id ?? null}
+            onselect={(id) => (selectedRoute = id)}
+            onclear={() => {
+              settings.landing = null
+              clickSets = 'landing'
+            }}
+          />
+          {#if narrow}
+            {@render profile('profile-inline')}
+          {/if}
+        {:else if settings.start}
+          <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
+        {/if}
+      {/snippet}
       {#snippet legend()}
         {#if reach}
           <Legend {bands} launchZone={reachRequest?.launchZone ?? settings.launchZone} />
