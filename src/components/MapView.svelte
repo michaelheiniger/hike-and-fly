@@ -82,6 +82,8 @@
     m.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     m.addControl(new ScaleControl({ unit: 'metric' }), 'top-right')
     m.on('load', () => {
+      // MapLibre opens the compact attribution at first; start folded to its (i) button.
+      container.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
       const empty = { type: 'FeatureCollection' as const, features: [] }
       m.addSource('route', { type: 'geojson', data: empty })
       m.addSource('highlight', { type: 'geojson', data: empty })
