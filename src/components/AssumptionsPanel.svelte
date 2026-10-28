@@ -151,98 +151,96 @@
 
 {@render landing?.()}
 
+{#snippet assumptionFields()}
+  <div class="field">
+    <span class="label">
+      <label for="clearance">Terrain clearance</label>
+      {#if isDefault('clearance')}<em>default</em>{/if}
+      <InfoTip topic="the terrain clearance">{EXPLANATIONS.clearance}</InfoTip>
+    </span>
+    <span class="inputs">
+      <input
+        id="clearance"
+        type="number"
+        step="10"
+        min={LIMITS.clearance[0]}
+        max={LIMITS.clearance[1]}
+        value={settings.clearance}
+        onchange={numberInput('clearance')}
+      />
+      <span class="unit">m</span>
+    </span>
+  </div>
+
+  <div class="field">
+    <span class="label">
+      <label for="launch-zone">Launch zone</label>
+      {#if isDefault('launchZone')}<em>default</em>{/if}
+      <InfoTip topic="the launch zone">{EXPLANATIONS.launchZone}</InfoTip>
+    </span>
+    <span class="inputs">
+      <input
+        id="launch-zone"
+        type="number"
+        step="50"
+        min={LIMITS.launchZone[0]}
+        max={LIMITS.launchZone[1]}
+        value={settings.launchZone}
+        onchange={numberInput('launchZone')}
+      />
+      <span class="unit">m</span>
+    </span>
+  </div>
+
+  <div class="field">
+    <span class="label">
+      <label for="arrival-height">Arrival height</label>
+      {#if isDefault('arrivalHeight')}<em>default</em>{/if}
+      <InfoTip topic="the arrival height">{EXPLANATIONS.arrivalHeight}</InfoTip>
+    </span>
+    <span class="inputs">
+      <input
+        id="arrival-height"
+        type="number"
+        step="10"
+        min={LIMITS.arrivalHeight[0]}
+        max={LIMITS.arrivalHeight[1]}
+        value={settings.arrivalHeight}
+        onchange={numberInput('arrivalHeight')}
+      />
+      <span class="unit">m</span>
+    </span>
+  </div>
+
+  <div class="field">
+    <span class="label">Wind <InfoTip topic="wind">{EXPLANATIONS.wind}</InfoTip></span>
+    <span class="value warning">Still air</span>
+  </div>
+
+  <div class="field">
+    <span class="label">
+      Elevation data
+      <InfoTip topic="the elevation data">
+        {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so
+        obstacles are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
+      </InfoTip>
+    </span>
+    <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
+  </div>
+
+  <button
+    type="button"
+    class="link"
+    onclick={() => {
+      settings.glideRatio = DEFAULTS.glideRatio
+      settings.clearance = DEFAULTS.clearance
+      settings.launchZone = DEFAULTS.launchZone
+      settings.arrivalHeight = DEFAULTS.arrivalHeight
+    }}>Reset to defaults</button
+  >
+{/snippet}
+
 {#snippet settingsBody()}
-  <section>
-    <h2>Assumptions</h2>
-
-    <div class="field">
-      <span class="label">
-        <label for="clearance">Terrain clearance</label>
-        {#if isDefault('clearance')}<em>default</em>{/if}
-        <InfoTip topic="the terrain clearance">{EXPLANATIONS.clearance}</InfoTip>
-      </span>
-      <span class="inputs">
-        <input
-          id="clearance"
-          type="number"
-          step="10"
-          min={LIMITS.clearance[0]}
-          max={LIMITS.clearance[1]}
-          value={settings.clearance}
-          onchange={numberInput('clearance')}
-        />
-        <span class="unit">m</span>
-      </span>
-    </div>
-
-    <div class="field">
-      <span class="label">
-        <label for="launch-zone">Launch zone</label>
-        {#if isDefault('launchZone')}<em>default</em>{/if}
-        <InfoTip topic="the launch zone">{EXPLANATIONS.launchZone}</InfoTip>
-      </span>
-      <span class="inputs">
-        <input
-          id="launch-zone"
-          type="number"
-          step="50"
-          min={LIMITS.launchZone[0]}
-          max={LIMITS.launchZone[1]}
-          value={settings.launchZone}
-          onchange={numberInput('launchZone')}
-        />
-        <span class="unit">m</span>
-      </span>
-    </div>
-
-    <div class="field">
-      <span class="label">
-        <label for="arrival-height">Arrival height</label>
-        {#if isDefault('arrivalHeight')}<em>default</em>{/if}
-        <InfoTip topic="the arrival height">{EXPLANATIONS.arrivalHeight}</InfoTip>
-      </span>
-      <span class="inputs">
-        <input
-          id="arrival-height"
-          type="number"
-          step="10"
-          min={LIMITS.arrivalHeight[0]}
-          max={LIMITS.arrivalHeight[1]}
-          value={settings.arrivalHeight}
-          onchange={numberInput('arrivalHeight')}
-        />
-        <span class="unit">m</span>
-      </span>
-    </div>
-
-    <div class="field">
-      <span class="label">Wind <InfoTip topic="wind">{EXPLANATIONS.wind}</InfoTip></span>
-      <span class="value warning">Still air</span>
-    </div>
-
-    <div class="field">
-      <span class="label">
-        Elevation data
-        <InfoTip topic="the elevation data">
-          {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so
-          obstacles are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
-        </InfoTip>
-      </span>
-      <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
-    </div>
-
-    <button
-      type="button"
-      class="link"
-      onclick={() => {
-        settings.glideRatio = DEFAULTS.glideRatio
-        settings.clearance = DEFAULTS.clearance
-        settings.launchZone = DEFAULTS.launchZone
-        settings.arrivalHeight = DEFAULTS.arrivalHeight
-      }}>Reset to defaults</button
-    >
-  </section>
-
   <section>
     <label class="field">
       <span class="label">Map</span>
@@ -275,14 +273,26 @@
   </section>
 
   {@render footer?.()}
+
+  {#if collapsible}
+    <section>
+      <h2>Assumptions</h2>
+      {@render assumptionFields()}
+    </section>
+  {:else}
+    <details class="fold">
+      <summary><h2>Assumptions</h2></summary>
+      <section class="fold-body">{@render assumptionFields()}</section>
+    </details>
+  {/if}
 {/snippet}
 
 {#if collapsible}
-  <details class="settings">
+  <details class="settings fold">
     <summary>
       <span class="label">Settings</span>
       <span class="muted small">
-        Assumptions, map, offline
+        Map, offline, assumptions
       </span>
     </summary>
     <div class="settings-body">{@render settingsBody()}</div>
@@ -292,7 +302,7 @@
 {/if}
 
 <style>
-  .settings summary {
+  .fold summary {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -301,21 +311,25 @@
     list-style: none;
   }
 
-  .settings summary::-webkit-details-marker {
+  .fold summary::-webkit-details-marker {
     display: none;
   }
 
-  .settings summary::after {
+  .fold summary::after {
     content: '▾';
     color: var(--text-muted);
   }
 
-  .settings[open] summary::after {
+  .fold[open] summary::after {
     content: '▴';
   }
 
   .settings summary .muted {
     margin-left: auto;
+  }
+
+  .fold-body {
+    margin-top: 6px;
   }
 
   .settings-body {
