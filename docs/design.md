@@ -90,8 +90,8 @@ one of them can be changed. All settings are encoded in the URL so plans can be 
 | Setting | Default | Rationale |
 |---|---|---|
 | Start height | 0 m AGL (input in AGL or AMSL) | Ground launch. Higher values model climbing in a thermal first. |
-| Glide ratio | 7 | Realistic still-air value for a light wing at trim, below the brochure value. |
-| Terrain clearance | 100 m | Margin for sink, turbulence near slopes, and elevation data errors. |
+| Glide ratio | 5 | Pessimistic on purpose: a light wing does about 7 at trim; the margin covers sinking air and headwind. |
+| Terrain clearance | 50 m | Margin for sink, turbulence near slopes, and elevation data errors. |
 | Launch zone | 500 m | Clearance ramps from 0 at the start to full over this distance; otherwise nothing is reachable from a ground launch. |
 | Arrival height over landing | 100 m | Height for the landing pattern (milestone 2). |
 | Wind | none (still air) | Shown as a warning, not hidden. |
@@ -126,7 +126,7 @@ since the tiles keep the maximum per pixel; offline, the tiles are interpolated.
 
 1. **Resample** 2 m → pyramid of levels (finest ~6–13 m). 2 m would be hundreds of millions
    of cells for a typical search area; a few meters of elevation error is irrelevant next to
-   a 100 m clearance.
+   a 50 m clearance.
 2. **Downsample with the maximum**, not the mean: a cell is never lower than any real point
    inside it, so ridges are never underestimated (safe side). Passes look slightly higher and
    narrower — slightly pessimistic.

@@ -17,7 +17,7 @@ export const DEFAULTS: Omit<Settings, 'start' | 'landing'> = {
   startHeight: 0,
   startHeightMode: 'agl',
   glideRatio: 5,
-  clearance: 100,
+  clearance: 50,
   launchZone: 500,
   arrivalHeight: 100,
 }
