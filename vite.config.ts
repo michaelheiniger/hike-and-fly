@@ -8,13 +8,14 @@ import { defineConfig, type Plugin } from 'vite'
 function publicFiles(dir: string): string[] {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
-    .map((entry) => `/${relative(dir, join(entry.parentPath, entry.name))}`)
-    .filter((path) => !path.startsWith('/terrain/'))
+    .map((entry) => relative(dir, join(entry.parentPath, entry.name)))
+    .filter((path) => !path.startsWith('terrain/'))
 }
 
 /**
  * Emits sw.js from sw/service-worker.js with the list of built files to precache
  * and a version derived from them, so each build replaces the cached app shell.
+ * Paths are relative to sw.js, so the app works under any base path.
  */
 function serviceWorker(): Plugin {
   let publicDir = ''
@@ -27,10 +28,8 @@ function serviceWorker(): Plugin {
       publicDir = config.publicDir
     },
     generateBundle(_, bundle) {
-      const built = Object.keys(bundle)
-        .filter((file) => !file.endsWith('.map'))
-        .map((file) => `/${file}`)
-      const precache = ['/', ...built, ...publicFiles(publicDir)].sort()
+      const built = Object.keys(bundle).filter((file) => !file.endsWith('.map'))
+      const precache = ['./', ...built, ...publicFiles(publicDir)].sort()
       const hash = createHash('sha256')
       for (const file of Object.values(bundle)) hash.update(file.type === 'chunk' ? file.code : file.source)
       const source = readFileSync('sw/service-worker.js', 'utf8')
@@ -43,6 +42,8 @@ function serviceWorker(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Where the app is served, e.g. /hike-and-fly/ on GitHub Pages.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [svelte(), serviceWorker()],
   worker: { format: 'es' },
 })

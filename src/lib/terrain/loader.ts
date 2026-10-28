@@ -26,7 +26,7 @@ export const AWS_TERRARIUM: TerrainSource = {
  * the app. Absent archives are fine: the global tiles are used instead.
  */
 export const SWISS_ARCHIVE = {
-  url: '/terrain/swissalti3d.pmtiles',
+  url: `${import.meta.env.BASE_URL}terrain/swissalti3d.pmtiles`,
   description: 'swissALTI3D (swisstopo, 2 m) in Switzerland, kept at its highest point per ~13 m pixel; AWS Terrain Tiles elsewhere',
   attribution: 'Elevation: © swisstopo swissALTI3D',
 }

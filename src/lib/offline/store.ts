@@ -9,7 +9,7 @@ export const AREA_CACHE_PREFIX = 'hf-area-'
 
 /** Key of a downloaded elevation tile. */
 export function offlineElevationUrl(z: number, x: number, y: number): string {
-  return `${self.location.origin}/offline-elevation/${z}/${x}/${y}.png`
+  return `${self.location.origin}${import.meta.env.BASE_URL}offline-elevation/${z}/${x}/${y}.png`
 }
 
 /** A downloaded elevation tile from any area, or undefined. Never throws. */

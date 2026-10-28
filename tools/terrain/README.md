@@ -37,3 +37,11 @@ What it does, and why (see `docs/design.md`):
 - Writes PMTiles v3 (clustered, gzip directories, PNG tiles) with a small built-in writer.
 
 The archive is generated data and is not committed.
+
+## Deployment
+
+The GitHub Pages workflow (`.github/workflows/pages.yml`) takes the archive from a
+release asset. After a rebuild, publish it under a new tag and update `TERRAIN_RELEASE`:
+
+    gh release create terrain-YYYY-MM-DD public/terrain/swissalti3d.pmtiles \
+      --title "swissALTI3D terrain YYYY-MM-DD" --notes "Elevation archive for the app."

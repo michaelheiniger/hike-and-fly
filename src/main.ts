@@ -8,7 +8,7 @@ const app = mount(App, {
 
 // Offline support: only in production builds (the dev server serves modules on demand).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('Service worker registration failed', err))
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((err) => console.warn('Service worker registration failed', err))
 }
 
 export default app

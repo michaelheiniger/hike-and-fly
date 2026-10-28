@@ -5,7 +5,8 @@
 // - Map tiles are served from downloaded areas (caches named hf-area-*) when
 //   present, else from the network. Elevation tiles are read by the app itself.
 //
-// The build fills in the version and the list of files to precache (see vite.config.ts).
+// The build fills in the version and the list of files to precache, relative to
+// this script (see vite.config.ts).
 
 const VERSION = __VERSION__
 const PRECACHE = __PRECACHE__
@@ -36,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
 
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match('/index.html', { cacheName: SHELL_CACHE })))
+    event.respondWith(fetch(request).catch(() => caches.match(new URL('index.html', self.registration.scope).href, { cacheName: SHELL_CACHE })))
     return
   }
 
