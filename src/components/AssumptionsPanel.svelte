@@ -12,11 +12,11 @@
     computing: boolean
     error: string | null
     basemap: BasemapId
-    /** Rendered between the glide inputs and the assumptions (the legend). */
+    /** Rendered between the glide inputs and the assumptions (the legend), always visible. */
     legend?: Snippet
     /** Rendered after the settings, inside the fold when collapsible. */
     footer?: Snippet
-    /** Folds the settings behind a summary line (narrow screens), the legend above it. */
+    /** Folds the settings below the legend behind a summary line, and drops the glide explanations (narrow screens). */
     collapsible?: boolean
   }
 
@@ -101,49 +101,49 @@
   </div>
 </section>
 
+<section>
+  <h2>Glide</h2>
+
+  <label class="field">
+    <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
+    <span class="inputs">
+      <input type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
+      <input
+        type="number"
+        class="narrow"
+        step={GLIDE_STEP}
+        min={LIMITS.glideRatio[0]}
+        max={LIMITS.glideRatio[1]}
+        value={settings.glideRatio}
+        onchange={numberInput('glideRatio')}
+      />
+    </span>
+  </label>
+  {#if !collapsible}<p class="explain">{EXPLANATIONS.glideRatio}</p>{/if}
+
+  <label class="field">
+    <span class="label">Start height</span>
+    <span class="inputs">
+      <input
+        type="number"
+        step="50"
+        min={LIMITS.startHeight[0]}
+        max={LIMITS.startHeight[1]}
+        value={settings.startHeight}
+        onchange={numberInput('startHeight')}
+      />
+      <span class="segmented" role="group" aria-label="Height reference">
+        <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>AGL</button>
+        <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
+      </span>
+    </span>
+  </label>
+  {#if !collapsible}<p class="explain">{EXPLANATIONS.startHeight}</p>{/if}
+</section>
+
+{@render legend?.()}
+
 {#snippet settingsBody()}
-  <section>
-    <h2>Glide</h2>
-
-    <label class="field">
-      <span class="label">Start height</span>
-      <span class="inputs">
-        <input
-          type="number"
-          step="50"
-          min={LIMITS.startHeight[0]}
-          max={LIMITS.startHeight[1]}
-          value={settings.startHeight}
-          onchange={numberInput('startHeight')}
-        />
-        <span class="segmented" role="group" aria-label="Height reference">
-          <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>AGL</button>
-          <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
-        </span>
-      </span>
-    </label>
-    <p class="explain">{EXPLANATIONS.startHeight}</p>
-
-    <label class="field">
-      <span class="label">Glide ratio {#if isDefault('glideRatio')}<em>default</em>{/if}</span>
-      <span class="inputs">
-        <input type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
-        <input
-          type="number"
-          class="narrow"
-          step={GLIDE_STEP}
-          min={LIMITS.glideRatio[0]}
-          max={LIMITS.glideRatio[1]}
-          value={settings.glideRatio}
-          onchange={numberInput('glideRatio')}
-        />
-      </span>
-    </label>
-    <p class="explain">{EXPLANATIONS.glideRatio}</p>
-  </section>
-
-  {#if !collapsible}{@render legend?.()}{/if}
-
   <section>
     <h2>Assumptions</h2>
 
@@ -256,12 +256,11 @@
 {/snippet}
 
 {#if collapsible}
-  {@render legend?.()}
   <details class="settings">
     <summary>
       <span class="label">Settings</span>
       <span class="muted small">
-        Glide {settings.glideRatio} · {settings.startHeight} m {settings.startHeightMode.toUpperCase()}
+        Assumptions, map, offline
       </span>
     </summary>
     <div class="settings-body">{@render settingsBody()}</div>

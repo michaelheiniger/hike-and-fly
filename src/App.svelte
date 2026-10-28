@@ -284,10 +284,8 @@
       ></div>
     {/if}
     <header>
-      <h1>
-        Hike &amp; Fly Planner
-        {#if !online}<span class="offline-badge">Offline</span>{/if}
-      </h1>
+      <h1 class="visually-hidden">Hike &amp; Fly Planner</h1>
+      {#if !online}<span class="offline-badge">Offline</span>{/if}
       {#if settings.start}
         <div class="click-mode">
           <span>Click on the map sets</span>
@@ -391,16 +389,18 @@
     gap: 14px;
   }
 
-  header h1 {
-    font-size: 17px;
-    margin: 0;
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .offline-badge {
     font-size: 11px;
     font-weight: 500;
-    vertical-align: middle;
-    margin-left: 6px;
     padding: 1px 6px;
     border-radius: 4px;
     background: var(--critical);
@@ -408,7 +408,7 @@
   }
 
   .hint {
-    margin: 6px 0 0;
+    margin: 0;
     color: var(--text-muted);
   }
 
@@ -417,7 +417,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 8px;
     color: var(--text-muted);
   }
 
