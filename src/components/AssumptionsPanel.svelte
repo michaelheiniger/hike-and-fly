@@ -53,8 +53,8 @@
   const isDefault = (key: keyof typeof DEFAULTS) => settings[key] === DEFAULTS[key]
 </script>
 
-<section class="start">
-  {#if settings.start}
+{#if settings.start}
+  <section class="start">
     <div class="row">
       <span class="label">Start</span>
       <span class="value">
@@ -73,39 +73,39 @@
         </span>
       </div>
     {/if}
-  {/if}
 
-  <div class="status" aria-live="polite">
-    {#if computing}
-      <span class="muted">Computing…</span>
-    {:else if error}
-      <span class="error">⚠ {error}</span>
-    {:else if result && result.reachableCells <= 1}
-      <span class="warning">
-        ⚠ No glide possible from here: the ground around the start is not steeper than the glide path. Pick a steeper
-        slope or add start height.
-      </span>
-    {:else if result && result.beyondLaunchZone === 0}
-      <span class="warning">
-        ⚠ Nothing is reachable beyond the launch zone (first {settings.launchZone} m, left uncolored): the ground below
-        the start is barely steeper than the glide path. Pick a steeper slope or add start height.
-      </span>
-    {:else if result?.truncated}
-      <span class="warning">⚠ The reachable area reaches the edge of the search area and may be cut off.</span>
-    {:else if result}
-      <span class="muted small">
-        Computed in {((result.timings.terrain + result.timings.search) / 1000).toFixed(1)} s (terrain {(
-          result.timings.terrain / 1000
-        ).toFixed(1)} s, search {(result.timings.search / 1000).toFixed(1)} s)
-      </span>
-    {/if}
-  </div>
-</section>
+    <div class="status" aria-live="polite">
+      {#if computing}
+        <span class="muted">Computing…</span>
+      {:else if error}
+        <span class="error">⚠ {error}</span>
+      {:else if result && result.reachableCells <= 1}
+        <span class="warning">
+          ⚠ No glide possible from here: the ground around the start is not steeper than the glide path. Pick a steeper
+          slope or add start height.
+        </span>
+      {:else if result && result.beyondLaunchZone === 0}
+        <span class="warning">
+          ⚠ Nothing is reachable beyond the launch zone (first {settings.launchZone} m, left uncolored): the ground below
+          the start is barely steeper than the glide path. Pick a steeper slope or add start height.
+        </span>
+      {:else if result?.truncated}
+        <span class="warning">⚠ The reachable area reaches the edge of the search area and may be cut off.</span>
+      {:else if result}
+        <span class="muted small">
+          Computed in {((result.timings.terrain + result.timings.search) / 1000).toFixed(1)} s (terrain {(
+            result.timings.terrain / 1000
+          ).toFixed(1)} s, search {(result.timings.search / 1000).toFixed(1)} s)
+        </span>
+      {/if}
+    </div>
+  </section>
+{/if}
 
 <section>
   <h2>Glide</h2>
 
-  <div class="field">
+  <div class="field stacked">
     <span class="label">
       <label for="glide-ratio">Glide ratio</label>
       {#if isDefault('glideRatio')}<em>default</em>{/if}
@@ -356,13 +356,25 @@
   .row,
   .field {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px 8px;
+  }
+
+  /* Label above, inputs across the full width below. */
+  .field.stacked {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stacked .inputs input[type='range'] {
+    flex: 1;
   }
 
   .label {
     font-weight: 500;
+    white-space: nowrap;
   }
 
   .label em {
@@ -388,7 +400,7 @@
   }
 
   input[type='number'] {
-    width: 76px;
+    width: 68px;
   }
 
   input.narrow {
