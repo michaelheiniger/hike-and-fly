@@ -266,11 +266,8 @@
         {/each}
       </select>
     </label>
-    <label class="toggle">
-      <input type="checkbox" bind:checked={preferences.showSlope} />
-      <span class="label">Slope classes over 30°</span>
-    </label>
     {#if preferences.showSlope}
+      <span class="label">Slope classes</span>
       <ul class="slope-legend">
         {#each SLOPE_OVERLAY.classes as c (c.label)}
           <li><span class="swatch" style:background={c.color}></span>{c.label}</li>
@@ -480,24 +477,10 @@
     color: var(--warning-text);
   }
 
-  .toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-  }
-
-  .toggle input {
-    accent-color: var(--accent);
-    width: 16px;
-    height: 16px;
-    margin: 0;
-  }
-
   .slope-legend {
     list-style: none;
     margin: 0;
-    padding: 0 0 0 24px;
+    padding: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 4px 12px;
