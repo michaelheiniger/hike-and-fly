@@ -109,7 +109,7 @@
   const hovered = $derived(hoverIndex === null ? null : points[hoverIndex])
 
   function move(e: PointerEvent) {
-    const rect = (e.currentTarget as SVGElement).getBoundingClientRect()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     const d = ((e.clientX - rect.left - margin.left) / plotW) * length
     if (d < 0 || d > length) return leave()
     let best = 0
@@ -137,8 +137,10 @@
     </span>
   </figcaption>
 
-  <div class="plot" bind:clientWidth={width}>
-    <svg {width} {height} role="img" aria-label="Altitude profile along the route" onpointermove={move} onpointerleave={leave}>
+  <!-- Pointer handlers on the HTML wrapper: some mobile browsers ignore touch-action on SVG. Pointer-only, like a hover. -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="plot" bind:clientWidth={width} onpointerdown={move} onpointermove={move} onpointerleave={leave} onpointercancel={leave}>
+    <svg {width} {height} role="img" aria-label="Altitude profile along the route">
       {#each yTicks as t (t)}
         <line class="grid" x1={margin.left} x2={margin.left + plotW} y1={y(t)} y2={y(t)} />
         <text class="tick" x={margin.left - 6} y={y(t)} text-anchor="end" dominant-baseline="middle">{t}</text>
@@ -234,11 +236,12 @@
 
   .plot {
     position: relative;
+    /* Sideways drags move the readout; vertical ones still scroll the panel. */
+    touch-action: pan-y;
   }
 
   svg {
     display: block;
-    touch-action: none;
   }
 
   .grid {
