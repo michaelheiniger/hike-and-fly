@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { ReachResult } from '../lib/compute/reach'
+  import { clearanceAt } from '../lib/glide/geometry'
   import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
   import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
@@ -51,6 +52,14 @@
   }
 
   const isDefault = (key: keyof typeof DEFAULTS) => settings[key] === DEFAULTS[key]
+
+  /** Clearance required at quarters of the launch zone, from the start to its end. */
+  const ramp = $derived(
+    [0, 0.25, 0.5, 0.75, 1].map((f) => {
+      const distance = f * settings.launchZone
+      return { distance, clearance: clearanceAt(settings, distance) }
+    }),
+  )
 </script>
 
 {#if settings.start}
@@ -191,6 +200,21 @@
       <span class="unit">m</span>
     </span>
   </div>
+
+  {#if settings.launchZone > 0}
+    <table class="ramp small">
+      <tbody>
+        <tr>
+          <th scope="row">Distance (m)</th>
+          {#each ramp as r (r.distance)}<td>{Math.round(r.distance)}</td>{/each}
+        </tr>
+        <tr>
+          <th scope="row">Clearance (m)</th>
+          {#each ramp as r (r.distance)}<td>{Math.round(r.clearance)}</td>{/each}
+        </tr>
+      </tbody>
+    </table>
+  {/if}
 
   <div class="field">
     <span class="label">
@@ -454,6 +478,25 @@
 
   .warning {
     color: var(--warning-text);
+  }
+
+  .ramp {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+  }
+
+  .ramp th {
+    font-weight: 400;
+    text-align: left;
+    padding-right: 6px;
+  }
+
+  .ramp td {
+    text-align: right;
+    padding-left: 6px;
+    white-space: nowrap;
   }
 
   .slope-legend {

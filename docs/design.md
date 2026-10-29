@@ -92,7 +92,7 @@ one of them can be changed. All settings are encoded in the URL so plans can be 
 | Start height | 0 m AGL (input in AGL or AMSL) | Ground launch. Higher values model climbing in a thermal first. |
 | Glide ratio | 5 | Pessimistic on purpose: a light wing does about 7 at trim; the margin covers sinking air and headwind. |
 | Terrain clearance | 50 m | Margin for sink, turbulence near slopes, and elevation data errors. |
-| Launch zone | 500 m | Clearance ramps from 0 at the start to full over this distance, with the cube of the distance (1/8 at mid-distance); otherwise nothing is reachable from a ground launch. Slow at first so a flat summit or a shoulder just below the launch does not block it. |
+| Launch zone | 500 m | Clearance ramps from 0 at the start to full over this distance, with the cube of the distance (1/8 at mid-distance); otherwise nothing is reachable from a ground launch. Slow at first so a flat summit or a shoulder just below the launch does not block it. The panel lists the clearance at each quarter of the zone. |
 | Arrival height over landing | 100 m | Height for the landing pattern (milestone 2). |
 | Wind | none (still air) | Shown as a warning, not hidden. |
 | Elevation resolution | depends on source (~10–30 m) | Shown so the pilot knows the data limits. |
