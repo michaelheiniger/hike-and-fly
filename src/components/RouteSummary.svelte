@@ -50,6 +50,10 @@
       <span class="value">{Math.round(result.landingElevation)} m AMSL</span>
     </div>
     <div class="row">
+      <span class="label">Vertical distance</span>
+      <span class="value">{Math.round(result.startElevation - result.landingElevation)} m</span>
+    </div>
+    <div class="row">
       <span class="label">Straight distance</span>
       <span class="value">{(result.straightDistance / 1000).toFixed(1)} km</span>
     </div>
