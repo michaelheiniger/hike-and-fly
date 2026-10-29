@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { arriveWith, findRequiredGlideRatio, type ArrivalProblem } from './required'
-import { searchGlide, type ElevationGrid } from './search'
+import { describe, expect, it, vi } from 'vitest'
+import type { ArrivalProblem } from './required'
+import type { ElevationGrid } from './search'
+
+/** Searches run, to check that hints save some. */
+const calls = vi.hoisted(() => ({ n: 0 }))
+vi.mock('./search', async (original) => {
+  const search = await original<typeof import('./search')>()
+  return { ...search, searchGlide: (...args: Parameters<typeof search.searchGlide>) => (calls.n++, search.searchGlide(...args)) }
+})
+
+const { arriveWith, findRequiredGlideRatio } = await import('./required')
+const { searchGlide } = await import('./search')
 
 const CELL = 10
 
@@ -62,6 +72,35 @@ describe('findRequiredGlideRatio', () => {
     // Around via the gap is ~1281 m → GR ≥ 2.14. Around wins.
     expect(found.glideRatio).toBeCloseTo((2 * Math.hypot(50, 40) * CELL) / 600, 0)
     expect(found.glideRatio).toBeLessThan(2.5)
+  })
+
+  describe('with hints', () => {
+    // The ridge-or-gap case: the answer is a detour, not the straight line.
+    const grid = makeGrid(101, 101, (c, r) => (c === 50 && (r < 90 || r > 94) ? 400 : 0))
+    const p = { ...problem(grid), startAltitude: 600, arrivalHeight: 0 }
+    const plain = findRequiredGlideRatio(grid, p, 1000)!
+
+    it('finds the same ratio whatever the guesses', () => {
+      for (const hints of [{ estimate: 1.7 }, { estimate: 2.14 }, { estimate: 2.5 }, { estimate: 24 }, { atLeast: 1.5 }, { atLeast: plain.glideRatio }]) {
+        expect(findRequiredGlideRatio(grid, p, 1000, 0.05, hints)!.glideRatio).toBe(plain.glideRatio)
+      }
+    })
+
+    it('needs fewer searches with a good estimate', () => {
+      const searches = (hints = {}) => {
+        calls.n = 0
+        findRequiredGlideRatio(grid, p, 1000, 0.05, hints)
+        return calls.n
+      }
+      const without = searches()
+      expect(searches({ estimate: plain.glideRatio })).toBeLessThan(without)
+      expect(searches({ estimate: plain.glideRatio })).toBeLessThanOrEqual(6)
+    })
+
+    it('returns null when even the largest ratio does not reach', () => {
+      const walled = makeGrid(101, 101, (c) => (c === 50 ? 5000 : 0))
+      expect(findRequiredGlideRatio(walled, problem(walled), 1000, 0.05, { estimate: 3 })).toBeNull()
+    })
   })
 
   it('returns null when the landing is above the start', () => {

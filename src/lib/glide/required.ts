@@ -28,10 +28,26 @@ export function arriveWith(grid: ElevationGrid, problem: ArrivalProblem, glideRa
 /** Highest glide ratio considered: beyond any paraglider. */
 export const MAX_GLIDE_RATIO = 25
 
+/** Grid routes run up to ~3 % longer than straight lines (16-neighbour moves). */
+const GRID_SLACK = 1.03
+
+/** Growth of the guesses while none reaches the landing. */
+const GUESS_GROWTH = 1.25
+
+export interface RatioHints {
+  /** Likely answer, e.g. the straight line over the terrain: the first guess. */
+  estimate?: number
+  /** A ratio known to be needed at least (a less blocked grid needed it): smaller ones are not tried. */
+  atLeast?: number
+}
+
 /**
  * Smallest glide ratio reaching the landing with the arrival height, or null if
  * even MAX_GLIDE_RATIO does not. Reachability is monotonic in the glide ratio
- * (a better glider is higher everywhere), so a bisection finds it. The result is
+ * (a better glider is higher everywhere), so ratios are tried on a grid of
+ * `precision` and the smallest reaching one is bracketed: guesses from the hints,
+ * growing until one reaches, then a bisection down to the last failure. The
+ * result is the same whatever the guesses; good ones only save searches. It is
  * rounded up to `precision`: conservative.
  */
 export function findRequiredGlideRatio(
@@ -39,29 +55,44 @@ export function findRequiredGlideRatio(
   problem: ArrivalProblem,
   straightDistance: number,
   precision = 0.05,
+  hints: RatioHints = {},
 ): Arrival | null {
   const height = problem.startAltitude - problem.targetElevation - problem.arrivalHeight
   if (height <= 0) return null
   // No route is shorter than the straight line: a lower bound.
-  let lo = straightDistance / height
-  if (lo > MAX_GLIDE_RATIO) return null
+  const bound = straightDistance / height
+  if (bound > MAX_GLIDE_RATIO) return null
 
-  const first = arriveWith(grid, problem, Math.ceil(lo / precision) * precision)
-  if (first.ok) return first
-  let best = arriveWith(grid, problem, MAX_GLIDE_RATIO)
-  if (!best.ok) return null
-  let hi = MAX_GLIDE_RATIO
-  lo = first.glideRatio
+  // Ratios are k × precision. `fail` is the largest k known to fail, `best` the smallest reaching one.
+  const last = Math.floor(MAX_GLIDE_RATIO / precision + 1e-9)
+  const step = (ratio: number) => Math.ceil(ratio / precision - 1e-9)
+  let fail = Math.max(step(bound), hints.atLeast ? step(hints.atLeast) : 0) - 1
+  const attempt = (k: number) => arriveWith(grid, problem, k * precision)
 
-  while (hi - lo > precision) {
-    const mid = Math.ceil((lo + hi) / 2 / precision) * precision
-    if (mid >= hi) break
-    const attempt = arriveWith(grid, problem, mid)
-    if (attempt.ok) {
-      hi = mid
-      best = attempt
+  let best: Arrival | null = null
+  let bestK = 0
+  let k = Math.max(fail + 1, step(Math.max(bound, hints.estimate ?? 0, hints.atLeast ?? 0) * GRID_SLACK))
+  while (!best) {
+    k = Math.min(k, last)
+    const arrival = attempt(k)
+    if (arrival.ok) {
+      best = arrival
+      bestK = k
     } else {
-      lo = mid
+      if (k >= last) return null
+      fail = k
+      k = Math.max(k + 1, Math.ceil(k * GUESS_GROWTH))
+    }
+  }
+
+  while (bestK - fail > 1) {
+    const mid = (fail + bestK) >> 1
+    const arrival = attempt(mid)
+    if (arrival.ok) {
+      best = arrival
+      bestK = mid
+    } else {
+      fail = mid
     }
   }
   return best

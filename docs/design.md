@@ -44,8 +44,13 @@ fast marching can tighten this later.
 
 The route depends on the glide ratio: a worse glider loses height faster, ridges become walls
 and it has to go around. Reachability is monotonic in GR (reachable at GR g ⇒ reachable at
-any g' > g), so the minimum GR is found by **binary search**, running the search for each
-candidate (~10 runs for 0.05 precision). If the straight line is clear, the result equals
+any g' > g), so the minimum GR is found by **binary search** over multiples of 0.05, running
+the search for each candidate. The first guess is the straight line over the terrain plus the
+grid's ~3 % overestimate; guesses grow by a quarter until one reaches the landing, then a
+bisection closes the gap. The result is the same whatever the guesses (monotonicity), they
+only save searches: ~6 instead of ~11 on the real scenarios, and the costly searches at high
+GR are avoided (search time −65 %). Alternatives start from the previous route's ratio, as a
+more blocked grid never needs less. If the straight line is clear, the result equals
 `distance / (h_start − h_landing − arrival_height)`.
 
 Implementation notes:

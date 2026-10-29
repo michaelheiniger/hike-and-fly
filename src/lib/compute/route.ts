@@ -8,7 +8,7 @@ import {
   type RouteContext,
   type RouteGeometry,
 } from '../glide/geometry'
-import { arriveWith, findRequiredGlideRatio, type ArrivalProblem } from '../glide/required'
+import { arriveWith, findRequiredGlideRatio, type ArrivalProblem, type RatioHints } from '../glide/required'
 import { traceRoute, type ElevationGrid } from '../glide/search'
 import { cellAt, localDistance, metersPerDegree, type GeoGrid, type LngLat } from '../terrain/geo'
 import type { ReachRequest } from './reach'
@@ -91,6 +91,8 @@ const MAX_ALTERNATIVES = 2
 interface Candidate {
   geometry: RouteGeometry
   required: number
+  /** Smallest glide ratio the grid search reached the landing with (0 for the pilot's route). */
+  searchRatio: number
   /** Band around the route (null for the pilot's route, which is never blocked). */
   mask: Uint8Array | null
   shortestWithGlideRatio: boolean
@@ -146,7 +148,8 @@ export class RoutePlanner {
         const last = plan.found[plan.found.length - 1]
         if (!last?.mask) break
         for (let i = 0; i < blocked.length; i++) blocked[i] |= last.mask[i]
-        const candidate = this.searchRequired(plan, blockedGrid(elevationGrid, blocked))
+        // More blocked than the grid of the last route: it needs at least that route's ratio.
+        const candidate = this.searchRequired(plan, blockedGrid(elevationGrid, blocked), { atLeast: last.searchRatio })
         if (!candidate) break
         plan.found.push(candidate)
       }
@@ -163,7 +166,9 @@ export class RoutePlanner {
     const t0 = performance.now()
     const plan = await this.prepare(req, key)
     plan.terrainTime = performance.now() - t0
-    const best = this.searchRequired(plan, plan.prepared.elevationGrid)
+    // The straight line over the terrain is a good first guess (Infinity when blocked: no guess).
+    const estimate = plan.straightLine.glideRatio
+    const best = this.searchRequired(plan, plan.prepared.elevationGrid, Number.isFinite(estimate) ? { estimate } : {})
     if (best) plan.found.push(best)
     else plan.alternativesDone = true
     this.last = plan
@@ -171,13 +176,14 @@ export class RoutePlanner {
   }
 
   /** Best route on a (possibly blocked) grid at its required glide ratio. */
-  private searchRequired(plan: Plan, grid: ElevationGrid): Candidate | null {
-    const found = findRequiredGlideRatio(grid, plan.problem, plan.straightDistance)
+  private searchRequired(plan: Plan, grid: ElevationGrid, hints: RatioHints): Candidate | null {
+    const found = findRequiredGlideRatio(grid, plan.problem, plan.straightDistance, undefined, hints)
     if (!found) return null
     const geometry = straightenRoute(grid, traceRoute(found.result, plan.problem.target), plan.ctx, found.glideRatio)
     return {
       geometry,
       required: requiredGlideRatioFor(geometry, plan.ctx),
+      searchRatio: found.glideRatio,
       mask: corridorMask(grid, geometry, plan.corridor, plan.keepClear),
       shortestWithGlideRatio: false,
     }
@@ -195,7 +201,13 @@ export class RoutePlanner {
       const same = candidates.find((c) => c.mask && shareInside(geometry, c.mask, plan.keepClear) > 0.5)
       if (same) same.shortestWithGlideRatio = true
       else {
-        candidates.push({ geometry, required: requiredGlideRatioFor(geometry, plan.ctx), mask: null, shortestWithGlideRatio: true })
+        candidates.push({
+          geometry,
+          required: requiredGlideRatioFor(geometry, plan.ctx),
+          searchRatio: 0,
+          mask: null,
+          shortestWithGlideRatio: true,
+        })
       }
     }
     const search = performance.now() - t0
