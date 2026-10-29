@@ -31,7 +31,7 @@ export const EXPLANATIONS = {
   clearance:
     'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (lowest legend band) are reachable as a final glide only.',
   launchZone:
-    'After the start, the clearance grows from 0 to its full value over this distance — otherwise no ground launch would be possible. It grows slowly at first (an eighth at mid-distance), then quickly towards the end.',
+    'After the start, the clearance grows from 0 to its full value over this distance — otherwise no ground launch would be possible. The ramp is cubic: required clearance = clearance × (distance flown ÷ launch zone)³. It grows slowly at first (1/64 at a quarter, 1/8 at mid-distance, about 2/5 at three quarters), then quickly towards the end.',
   arrivalHeight:
     'Height above the landing when arriving, for the landing pattern. The required glide ratio includes it.',
   wind: 'Not modelled yet: computations assume still air. Headwind and sink shrink the reachable area.',

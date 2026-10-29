@@ -57,6 +57,8 @@
     line-height: 1.4;
     text-transform: none;
     letter-spacing: normal;
+    /* Labels holding the tip keep to one line; the tip wraps. */
+    white-space: normal;
     color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
