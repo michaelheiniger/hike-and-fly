@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import type { RouteOption } from '../lib/compute/route'
-  import { clearanceAt as rampedClearance } from '../lib/glide/geometry'
+  import { altitudeAt, clearanceAt as rampedClearance } from '../lib/glide/geometry'
   import type { AglBand } from '../lib/render/agl'
   import type { LngLat } from '../lib/terrain/geo'
 
@@ -39,11 +39,13 @@
   const margin = { top: 8, right: 12, bottom: 22, left: 46 }
 
   const points = $derived(
-    route.path.map((p) => ({ ...p, altitude: startAltitude - p.distance / glideRatio })),
+    route.path.map((p) => ({ ...p, altitude: altitudeAt(route.liftoff, startAltitude, glideRatio, p.distance) })),
   )
-  const arrivalAgl = $derived(startAltitude - route.length / glideRatio - landingElevation)
+  const arrivalAgl = $derived(altitudeAt(route.liftoff, startAltitude, glideRatio, route.length) - landingElevation)
   const length = $derived(points.at(-1)?.distance ?? 1)
-  const clearanceAt = (d: number) => rampedClearance({ clearance, launchZone }, d)
+  /** Clearance ramped from the liftoff; none on the takeoff run. */
+  const clearanceAt = (d: number) =>
+    d < route.liftoff.distance ? 0 : rampedClearance({ clearance, launchZone }, d - route.liftoff.distance)
 
   /** Distances shown when zoomed in; null shows the whole route. */
   let view = $state<[number, number] | null>(null)

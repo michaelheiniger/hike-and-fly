@@ -90,8 +90,8 @@
         <span class="error">⚠ {error}</span>
       {:else if result && result.reachableCells <= 1}
         <span class="warning">
-          ⚠ No glide possible from here: the ground around the start is not steeper than the glide path. Pick a steeper
-          slope or add start height.
+          ⚠ No glide possible from here: the ground within the takeoff run ({settings.takeoffRun} m) is not steeper than
+          the glide path. Pick a steeper slope, a longer takeoff run, or add start height.
         </span>
       {:else if result && result.beyondLaunchZone === 0}
         <span class="warning">
@@ -218,6 +218,26 @@
 
   <div class="field">
     <span class="label">
+      <label for="takeoff-run">Takeoff run</label>
+      {#if isDefault('takeoffRun')}<em>default</em>{/if}
+      <InfoTip topic="the takeoff run">{EXPLANATIONS.takeoffRun}</InfoTip>
+    </span>
+    <span class="inputs">
+      <input
+        id="takeoff-run"
+        type="number"
+        step="10"
+        min={LIMITS.takeoffRun[0]}
+        max={LIMITS.takeoffRun[1]}
+        value={settings.takeoffRun}
+        onchange={numberInput('takeoffRun')}
+      />
+      <span class="unit">m</span>
+    </span>
+  </div>
+
+  <div class="field">
+    <span class="label">
       <label for="arrival-height">Arrival height</label>
       {#if isDefault('arrivalHeight')}<em>default</em>{/if}
       <InfoTip topic="the arrival height">{EXPLANATIONS.arrivalHeight}</InfoTip>
@@ -259,6 +279,7 @@
       settings.glideRatio = DEFAULTS.glideRatio
       settings.clearance = DEFAULTS.clearance
       settings.launchZone = DEFAULTS.launchZone
+      settings.takeoffRun = DEFAULTS.takeoffRun
       settings.arrivalHeight = DEFAULTS.arrivalHeight
     }}>Reset to defaults</button
   >

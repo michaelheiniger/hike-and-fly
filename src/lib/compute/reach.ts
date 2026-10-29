@@ -5,6 +5,7 @@ import {
   groundElevation,
   loadElevationGrid,
   lowestTerrain,
+  groundLaunch,
   startAltitudeFrom,
   type GridOptions,
   type HeightMode,
@@ -19,6 +20,8 @@ export interface ReachRequest {
   glideRatio: number
   clearance: number
   launchZone: number
+  /** Distance the pilot may run before lifting off, on a ground launch (m). */
+  takeoffRun: number
 }
 
 export interface ReachResult {
@@ -42,7 +45,7 @@ export interface ReachResult {
 
 /** Computes the area reachable from the start, with AGL over every cell. */
 export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, options: GridOptions): Promise<ReachResult> {
-  const { start, glideRatio, clearance, launchZone } = req
+  const { start, glideRatio, clearance, launchZone, takeoffRun } = req
   const { maxZoom, maxRadius = DEFAULT_MAX_RADIUS } = options
   const t0 = performance.now()
 
@@ -68,6 +71,7 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
     glideRatio,
     clearance,
     launchZone,
+    takeoffRun: groundLaunch(startAltitude, startElevation) ? takeoffRun : 0,
   })
   const agl = computeAgl(elevationGrid, result, startAltitude, glideRatio)
   let reachableCells = 0

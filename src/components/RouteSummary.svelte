@@ -1,6 +1,7 @@
 <script lang="ts">
   import { MAX_GLIDE_RATIO } from '../lib/glide/required'
   import type { RouteOption, RouteResult } from '../lib/compute/route'
+  import { altitudeAt } from '../lib/glide/geometry'
 
   interface Props {
     result: RouteResult | null
@@ -30,7 +31,8 @@
   const best = $derived(result?.options[0] ?? null)
 
   /** Height above the landing when flying a route with the pilot's glide ratio. */
-  const arrival = (o: RouteOption) => result!.startAltitude - o.length / glideRatio - result!.landingElevation
+  const arrival = (o: RouteOption) =>
+    altitudeAt(o.liftoff, result!.startAltitude, glideRatio, o.length) - result!.landingElevation
 
   const letter = (id: number) => String.fromCharCode(65 + id)
 

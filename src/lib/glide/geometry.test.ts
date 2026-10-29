@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { corridorMask, requiredGlideRatioFor, shareInside, straightenRoute, type RouteContext } from './geometry'
+import { altitudeAt, corridorMask, requiredGlideRatioFor, shareInside, straightenRoute, type RouteContext } from './geometry'
 import { searchGlide, traceRoute, type ElevationGrid } from './search'
 
 const CELL = 10
@@ -80,6 +80,35 @@ describe('straightenRoute samples', () => {
   it('take the cell value without a launch zone', () => {
     const { samples } = straightenRoute(grid, cells, ctx(0), 10)
     expect(at(samples, 15)).toBe(990) // the cell at 10 m (rounded)
+  })
+})
+
+describe('takeoff run', () => {
+  // Flat for 20 m, a 10 m step down at 30 m, then a 1:1 slope to the landing at 300 m.
+  const grid = makeGrid(31, 1, (c) => (c < 3 ? 1000 : 990 - (c - 3) * CELL))
+  const ctx: RouteContext = {
+    startAltitude: 1000,
+    clearance: 0,
+    launchZone: 0,
+    start: 0,
+    target: 30,
+    targetElevation: 720,
+    arrivalHeight: 0,
+  }
+  const result = searchGlide(grid, { startCol: 0, startRow: 0, startAltitude: 1000, glideRatio: 2, clearance: 0, launchZone: 0, takeoffRun: 30 })
+  const geometry = straightenRoute(grid, traceRoute(result, 30), ctx, 2)
+
+  it('puts the run before the glide', () => {
+    expect(geometry.vertices[0]).toEqual([0, 0])
+    expect(geometry.liftoff).toEqual({ distance: 30, altitude: 990, cell: 3 })
+    expect(geometry.length).toBeCloseTo(300, 6)
+  })
+
+  it('glides from the liftoff', () => {
+    // 270 m of glide for the 270 m from the liftoff down to the landing.
+    expect(requiredGlideRatioFor(geometry, ctx)).toBeCloseTo(1, 6)
+    expect(altitudeAt(geometry.liftoff, 1000, 2, 15)).toBe(995)
+    expect(altitudeAt(geometry.liftoff, 1000, 2, 130)).toBe(940)
   })
 })
 

@@ -4,7 +4,8 @@
  * - start and landing ground from the swisstopo height service,
  * - straight distance as the WGS84 geodesic (Vincenty),
  * - `demGlideRatio`: the best route's required glide ratio recomputed on the
- *   swisstopo 2 m profile service along the route's vertices.
+ *   swisstopo 2 m profile service along the route's vertices, from its liftoff
+ *   (at the service's height there) after the takeoff run.
  * The other values pin the current results, so changes in them are noticed.
  * Skipped without the archive (public/terrain/swissalti3d.pmtiles, see tools/terrain).
  */
@@ -33,8 +34,6 @@ interface Scenario {
   routes: [string | null, number, number][]
   /** AGL over the landing in the reach overlay, null where unreachable. */
   reachAgl: number | null
-  /** Why the result differs from what a pilot would expect. */
-  note?: string
 }
 
 const SCENARIOS: Scenario[] = [
@@ -46,7 +45,7 @@ const SCENARIOS: Scenario[] = [
     landingElevation: 779.2,
     geodesic: 6516.3,
     demGlideRatio: 4.733,
-    routes: [[null, 4.733, 6528], ['East', 5.114, 7053], ['West', 5.935, 6998]],
+    routes: [[null, 4.728, 6546], ['East', 5.1, 7032], ['West', 5.981, 7020]],
     reachAgl: 158.6,
   },
   {
@@ -57,7 +56,7 @@ const SCENARIOS: Scenario[] = [
     landingElevation: 564.9,
     geodesic: 4850.3,
     demGlideRatio: 3.959,
-    routes: [['South-west', 4.042, 4926], ['South-west', 5.719, 5486], ['North-east', 7.55, 5057]],
+    routes: [['South-west', 4.042, 4926], ['South-west', 5.446, 5494], ['North-east', 7.55, 5057]],
     reachAgl: 393.7,
   },
   {
@@ -67,9 +66,9 @@ const SCENARIOS: Scenario[] = [
     startElevation: 2118.2,
     landingElevation: 950.2,
     geodesic: 4589.3,
-    demGlideRatio: 4.294,
-    routes: [[null, 4.294, 4586], ['South-east', 4.607, 4920], ['South-east', 5.528, 5904]],
-    reachAgl: 245.8,
+    demGlideRatio: 4.285,
+    routes: [[null, 4.286, 4598], ['South-east', 4.6, 4913], ['South-east', 5.507, 5901]],
+    reachAgl: 246.3,
   },
   {
     name: 'First to Interlaken: the Faulhorn chain blocks the straight line',
@@ -104,21 +103,20 @@ const SCENARIOS: Scenario[] = [
     startElevation: 1869.9,
     landingElevation: 1008.2,
     geodesic: 2828.8,
-    demGlideRatio: 4.096,
-    routes: [['West', 4.15, 3120], ['West', 4.757, 3624], ['West', 9.403, 4567]],
-    reachAgl: 260,
+    demGlideRatio: 4.07,
+    routes: [['West', 4.133, 3124], ['West', 4.748, 3635], ['West', 9.35, 4560]],
+    reachAgl: 264.8,
   },
   {
-    name: 'Amisbühl to Interlaken: limited by the gentle takeoff',
-    note: 'The ground is 1.5 m below the takeoff 12 m out: the first meters need glide ratio 6.5, nothing is reachable at 5.',
+    name: 'Amisbühl to Interlaken: gentle takeoff, the run reaches steeper ground',
     start: { lng: 7.822284, lat: 46.702416 },
     landing: { lng: 7.858263, lat: 46.68624 },
     startElevation: 1324.5,
     landingElevation: 567.2,
     geodesic: 3287.4,
-    demGlideRatio: 6.055,
-    routes: [[null, 6.45, 3295], ['South-west', 7.608, 3534], ['South-west', 9.988, 4248]],
-    reachAgl: null,
+    demGlideRatio: 5.016,
+    routes: [[null, 5.012, 3311], ['South-west', 5.41, 3573], ['South-west', 7.05, 4306]],
+    reachAgl: 91.3,
   },
   {
     name: 'Männlichen summit to Wilderswil: steep ground just below a rounded summit',
@@ -129,11 +127,22 @@ const SCENARIOS: Scenario[] = [
     geodesic: 7619,
     demGlideRatio: 4.606,
     routes: [[null, 4.642, 7621], ['South-west', 4.964, 8213], ['South-west', 6.611, 9859]],
-    reachAgl: 218.3,
+    reachAgl: 218.8,
+  },
+  {
+    name: 'Brienzer Rothorn Süd to Hofstetten: flat takeoff edge, then steep',
+    start: { lng: 8.046892, lat: 46.786583 },
+    landing: { lng: 8.062464, lat: 46.753368 },
+    startElevation: 2319.4,
+    landingElevation: 663.2,
+    geodesic: 3879.2,
+    demGlideRatio: 2.483,
+    routes: [[null, 2.485, 3887], ['East', 2.703, 4224], ['West', 2.704, 4166]],
+    reachAgl: 859.6,
   },
 ]
 
-const ASSUMPTIONS = { clearance: 50, launchZone: 500, arrivalHeight: 100 }
+const ASSUMPTIONS = { clearance: 50, launchZone: 500, takeoffRun: 30, arrivalHeight: 100 }
 
 describe.skipIf(!hasArchive)('real scenarios', () => {
   let options: GridOptions
@@ -180,6 +189,10 @@ describe.skipIf(!hasArchive)('real scenarios', () => {
         expect(Math.abs(o.length - length)).toBeLessThan(5)
         // Never shorter than the straight line, but for routes joining cell centers.
         expect(o.length).toBeGreaterThanOrEqual(result.straightDistance - result.cellSize)
+        // A run on a ground launch only, within its distance and not uphill.
+        const run = s.startHeightMode === 'amsl' ? 0 : ASSUMPTIONS.takeoffRun
+        expect(o.liftoff.distance).toBeLessThanOrEqual(run)
+        expect(o.liftoff.altitude).toBeLessThanOrEqual(startAltitude)
       })
     })
 

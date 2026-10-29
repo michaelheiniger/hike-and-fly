@@ -10,6 +10,7 @@ export interface Settings {
   glideRatio: number
   clearance: number
   launchZone: number
+  takeoffRun: number
   arrivalHeight: number
 }
 
@@ -19,6 +20,7 @@ export const DEFAULTS: Omit<Settings, 'start' | 'landing'> = {
   glideRatio: 5,
   clearance: 50,
   launchZone: 500,
+  takeoffRun: 30,
   arrivalHeight: 100,
 }
 
@@ -32,6 +34,8 @@ export const EXPLANATIONS = {
     'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (lowest legend band) are reachable as a final glide only.',
   launchZone:
     'After the start, the clearance grows from 0 to its full value over this distance — otherwise no ground launch would be possible. The ramp is cubic: required clearance = clearance × (distance flown ÷ launch zone)³. It grows slowly at first (1/64 at a quarter, 1/8 at mid-distance, about 2/5 at three quarters), then quickly towards the end.',
+  takeoffRun:
+    'On a ground launch, how far the pilot may run before lifting off: the glide begins from the ground anywhere this close to the start and not above it, typically where the slope steepens. Otherwise a gentle takeoff, whose first meters are flatter than the glide path, would block everything. 0 starts the glide exactly at the start.',
   arrivalHeight:
     'Height above the landing when arriving, for the landing pattern. The required glide ratio includes it.',
   wind: 'Not modelled yet: computations assume still air. Headwind and sink shrink the reachable area.',
@@ -43,6 +47,7 @@ export const LIMITS = {
   glideRatio: [1, 20],
   clearance: [0, 1000],
   launchZone: [0, 5000],
+  takeoffRun: [0, 200],
   arrivalHeight: [0, 1000],
 } as const
 
@@ -72,6 +77,7 @@ function readUrl(): Settings {
     glideRatio: roundGlideRatio(num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio)),
     clearance: num('cl', DEFAULTS.clearance, LIMITS.clearance),
     launchZone: num('lz', DEFAULTS.launchZone, LIMITS.launchZone),
+    takeoffRun: num('tr', DEFAULTS.takeoffRun, LIMITS.takeoffRun),
     arrivalHeight: num('ar', DEFAULTS.arrivalHeight, LIMITS.arrivalHeight),
   }
 }
@@ -92,6 +98,7 @@ export function writeUrl(s: Settings): void {
   p.set('gr', `${s.glideRatio}`)
   p.set('cl', `${s.clearance}`)
   p.set('lz', `${s.launchZone}`)
+  p.set('tr', `${s.takeoffRun}`)
   p.set('ar', `${s.arrivalHeight}`)
   history.replaceState(null, '', `#${p}`)
 }

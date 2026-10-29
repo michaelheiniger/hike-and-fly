@@ -57,6 +57,29 @@ describe('searchGlide', () => {
     expect(result.distance[idx(grid, 50, 90)]).toBeCloseTo(400, -1)
   })
 
+  describe('takeoff run', () => {
+    // Flat for 20 m, a 10 m step down at 30 m, then a 1:1 slope.
+    const grid = makeGrid(101, 1, (c) => (c < 3 ? 1000 : 990 - (c - 3) * CELL))
+    const run = (takeoffRun: number) =>
+      searchGlide(grid, params({ startAltitude: 1000, glideRatio: 5, clearance: 50, launchZone: 500, takeoffRun }))
+
+    it('is needed when the ground near the start is flatter than the glide', () => {
+      expect(run(0).distance[idx(grid, 20, 0)]).toBe(Infinity)
+    })
+
+    it('lifts off at the ground and ramps the clearance from there', () => {
+      const result = run(30)
+      // 990 m at the liftoff, 170 m of glide at 5 to the cell at 200 m.
+      const altitude = 1000 - result.distance[idx(grid, 20, 0)] / 5
+      expect(altitude).toBeCloseTo(990 - 170 / 5, 1)
+      expect(traceRoute(result, idx(grid, 20, 0))[0]).toBe(idx(grid, 3, 0))
+    })
+
+    it('does not reach beyond its distance', () => {
+      expect(run(29).distance[idx(grid, 20, 0)]).toBe(Infinity)
+    })
+  })
+
   it('cannot take off from flat ground at AGL 0', () => {
     const grid = makeGrid(21, 21, () => 1000)
     const result = searchGlide(grid, params({ startCol: 10, startRow: 10, startAltitude: 1000, launchZone: 500, clearance: 100 }))

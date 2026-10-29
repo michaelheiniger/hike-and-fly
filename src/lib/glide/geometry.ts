@@ -25,12 +25,31 @@ export interface RouteSample {
   cell: number
 }
 
+/** Where the glide begins: at the start, or on the ground at the end of the takeoff run. */
+export interface Liftoff {
+  /** Distance along the route (m): the length of the run, 0 without one. */
+  distance: number
+  /** Altitude AMSL (m). */
+  altitude: number
+  cell: number
+}
+
 /** A route as straight segments between cell centers, with dense samples for checks and profiles. */
 export interface RouteGeometry {
   vertices: [number, number][]
   samples: RouteSample[]
-  /** Distance flown (m). */
+  /** Distance from the start, run and glide (m). */
   length: number
+  liftoff: Liftoff
+}
+
+/**
+ * Altitude at `d` meters along a route: on the ground during the takeoff run (straight
+ * between its ends), then gliding from the liftoff.
+ */
+export function altitudeAt(liftoff: Pick<Liftoff, 'distance' | 'altitude'>, startAltitude: number, glideRatio: number, d: number): number {
+  if (d < liftoff.distance) return startAltitude + ((liftoff.altitude - startAltitude) * d) / liftoff.distance
+  return liftoff.altitude - (d - liftoff.distance) / glideRatio
 }
 
 /**
@@ -105,9 +124,29 @@ function samplesFlyable(samples: RouteSample[], ctx: RouteContext, glideRatio: n
 /**
  * Straightens a grid route: from each vertex, jumps to the farthest following
  * cell reachable in a straight flyable line. The result is never longer than the
- * grid route, so it stays flyable at `glideRatio`.
+ * grid route, so it stays flyable at `glideRatio`. A route traced from a liftoff
+ * after the takeoff run (see `searchGlide`) gets the run from the start first.
  */
 export function straightenRoute(grid: ElevationGrid, cells: number[], ctx: RouteContext, glideRatio: number): RouteGeometry {
+  const first = cells[0]
+  if (first === ctx.start) return straightenGlide(grid, cells, ctx, glideRatio)
+
+  // The glide from the liftoff, at its ground; then the run is put in front of it.
+  const glide = straightenGlide(grid, cells, { ...ctx, start: first, startAltitude: grid.elevation[first] }, glideRatio)
+  const start: [number, number] = [ctx.start % grid.cols, Math.floor(ctx.start / grid.cols)]
+  const run: RouteSample[] = []
+  sampleSegment(grid, start[0], start[1], glide.vertices[0][0], glide.vertices[0][1], 0, ctx.launchZone, run)
+  const runLength = run[run.length - 1].distance
+  const startSample: RouteSample = { distance: 0, col: start[0], row: start[1], elevation: grid.elevation[ctx.start], cell: ctx.start }
+  return {
+    vertices: [start, ...glide.vertices],
+    samples: [startSample, ...run, ...glide.samples.slice(1).map((s) => ({ ...s, distance: s.distance + runLength }))],
+    length: runLength + glide.length,
+    liftoff: { ...glide.liftoff, distance: runLength },
+  }
+}
+
+function straightenGlide(grid: ElevationGrid, cells: number[], ctx: RouteContext, glideRatio: number): RouteGeometry {
   const pos = cells.map((cell): [number, number] => [cell % grid.cols, Math.floor(cell / grid.cols)])
   const vertices: [number, number][] = [pos[0]]
   const samples: RouteSample[] = []
@@ -132,24 +171,27 @@ export function straightenRoute(grid: ElevationGrid, cells: number[], ctx: Route
 
   const first = pos[0]
   const startSample: RouteSample = { distance: 0, col: first[0], row: first[1], elevation: grid.elevation[cells[0]], cell: cells[0] }
-  return { vertices, samples: [startSample, ...samples], length: distance }
+  const liftoff = { distance: 0, altitude: ctx.startAltitude, cell: cells[0] }
+  return { vertices, samples: [startSample, ...samples], length: distance, liftoff }
 }
 
 /**
- * Smallest glide ratio flying this exact route: every sample above terrain plus
- * clearance, and the arrival height over the landing. Infinity if impossible.
+ * Smallest glide ratio flying this exact route from its liftoff: every sample above
+ * terrain plus clearance, and the arrival height over the landing. Infinity if impossible.
  */
 export function requiredGlideRatioFor(route: RouteGeometry, ctx: RouteContext): number {
+  const { liftoff } = route
   let required = 0
   for (const s of route.samples) {
-    if (s.cell === ctx.start || s.cell === ctx.target || s.distance === 0) continue
-    const height = ctx.startAltitude - s.elevation - clearanceAt(ctx, s.distance)
+    if (s.distance <= liftoff.distance || s.cell === liftoff.cell || s.cell === ctx.start || s.cell === ctx.target) continue
+    const flown = s.distance - liftoff.distance
+    const height = liftoff.altitude - s.elevation - clearanceAt(ctx, flown)
     if (height <= 0) return Infinity
-    required = Math.max(required, s.distance / height)
+    required = Math.max(required, flown / height)
   }
-  const height = ctx.startAltitude - ctx.targetElevation - ctx.arrivalHeight
+  const height = liftoff.altitude - ctx.targetElevation - ctx.arrivalHeight
   if (height <= 0) return Infinity
-  return Math.max(required, route.length / height)
+  return Math.max(required, (route.length - liftoff.distance) / height)
 }
 
 /**

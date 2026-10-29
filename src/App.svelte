@@ -88,6 +88,7 @@
       glideRatio: s.glideRatio,
       clearance: s.clearance,
       launchZone: s.launchZone,
+      takeoffRun: s.takeoffRun,
     }
     const timer = setTimeout(() => {
       client.reach(reachReq)

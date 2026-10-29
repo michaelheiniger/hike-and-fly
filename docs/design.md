@@ -27,6 +27,13 @@ path** to it. This makes the problem a constrained shortest-path search on a ter
 
 One search yields the overlay, the reachable area, and the best route to every point.
 
+**Takeoff run.** On a ground launch the pilot runs before lifting off, and the first meters
+of a takeoff are often flatter than the glide path. Every cell within the takeoff run of the
+start and not above it is also a source, at its own ground: its distance is the height run
+down times GR (`altitude = h_start − d / GR` still holds), and the clearance ramps from the
+liftoff. Routes keep the run in front of the glide; their required GR, arrival height and
+profile count from the liftoff. A start in the air has no run.
+
 **Distance accuracy.** 8-neighbour moves overestimate straight-line distances by up to ~8 %,
 which directly inflates glide ratios. The search uses 16-neighbour moves (knight moves
 included), bounding the error to ~2.7 % in open air. Paths bending around obstacle corners
@@ -96,6 +103,7 @@ one of them can be changed. All settings are encoded in the URL so plans can be 
 | Glide ratio | 5 | Pessimistic on purpose: a light wing does about 7 at trim; the margin covers sinking air and headwind. |
 | Terrain clearance | 50 m | Margin for sink, turbulence near slopes, and elevation data errors. |
 | Launch zone | 500 m | Clearance ramps from 0 at the start to full over this distance, with the cube of the distance (1/8 at mid-distance); otherwise nothing is reachable from a ground launch. Slow at first so a flat summit or a shoulder just below the launch does not block it. The panel lists the clearance at each quarter of the zone. |
+| Takeoff run | 30 m | On a ground launch, the glide may begin from the ground anywhere this close to the start and not above it. Otherwise a gentle takeoff blocks everything (Amisbühl: 6.5 instead of 5.0). |
 | Arrival height over landing | 100 m | Height for the landing pattern (milestone 2). |
 | Wind | none (still air) | Shown as a warning, not hidden. |
 | Elevation resolution | depends on source (~10–30 m) | Shown so the pilot knows the data limits. |

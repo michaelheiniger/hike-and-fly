@@ -54,6 +54,9 @@ export function startAltitudeFrom(height: number, mode: HeightMode, ground: numb
   return altitude
 }
 
+/** True when the start is on the ground: a takeoff run is possible, not in the air. */
+export const groundLaunch = (startAltitude: number, ground: number) => startAltitude - ground < 1
+
 /** Lowest terrain within `radius` of a point, from coarse tiles. */
 export async function lowestTerrain(center: LngLat, radius: number, loadTiles: LoadTiles, maxZoom: number): Promise<number> {
   const z = zoomForCellSize(radius / 64, center.lat, maxZoom)

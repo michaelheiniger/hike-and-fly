@@ -26,14 +26,24 @@ export interface GlideParams {
   clearance: number
   /** Distance over which the clearance ramps from 0 to full after the start (m). */
   launchZone: number
+  /**
+   * Distance the pilot may run from the start before lifting off (m): any cell this
+   * close and not above the start can be the liftoff, at its ground. 0 or absent
+   * for a start in the air.
+   */
+  takeoffRun?: number
   /** Stop as soon as the shortest distance to this cell is known. */
   target?: number
 }
 
 export interface GlideResult {
-  /** Shortest flyable distance from the start in meters, Infinity if unreachable. */
+  /**
+   * Shortest flyable distance from the start in meters, Infinity if unreachable. After
+   * a takeoff run it counts the height run down as the distance gliding it would take,
+   * so the altitude over every cell is `startAltitude − distance / glideRatio`.
+   */
   distance: Float32Array
-  /** Index of the previous cell on the shortest route, -1 for the start and unreachable cells. */
+  /** Index of the previous cell on the shortest route, -1 for the start, liftoff and unreachable cells. */
   predecessor: Int32Array
   /** True if a reachable cell touches the grid border (the area may be cut off). */
   truncated: boolean
@@ -66,6 +76,9 @@ const MOVES: Move[] = (() => {
   return moves
 })()
 
+/** Height above the ground at a liftoff after the takeoff run (m): float rounding must not put it below. */
+export const LIFTOFF_MARGIN = 0.01
+
 /**
  * Computes the shortest flyable distance from the start to every cell.
  *
@@ -77,7 +90,7 @@ const MOVES: Move[] = (() => {
  */
 export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResult {
   const { cols, rows, elevation, cellHeight, rowCellWidth } = grid
-  const { startCol, startRow, glideRatio, clearance, launchZone, target = -1 } = params
+  const { startCol, startRow, glideRatio, clearance, launchZone, takeoffRun = 0, target = -1 } = params
   const cellCount = cols * rows
 
   const distance = new Float32Array(cellCount).fill(Infinity)
@@ -108,6 +121,28 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
   distance[start] = 0
   heap.push(0, start)
 
+  // Liftoffs after running down: at the ground, a hair above so the glide can go on.
+  // The clearance ramps from each liftoff, so `offset` keeps where its glide began.
+  const offset = takeoffRun > 0 ? new Float32Array(cellCount) : null
+  if (offset) {
+    const dr = Math.floor(takeoffRun / cellHeight)
+    for (let r = Math.max(0, startRow - dr); r <= Math.min(rows - 1, startRow + dr); r++) {
+      const y = (r - startRow) * cellHeight
+      const dc = Math.floor(Math.sqrt(Math.max(0, takeoffRun * takeoffRun - y * y)) / rowCellWidth[r])
+      for (let c = Math.max(0, startCol - dc); c <= Math.min(cols - 1, startCol + dc); c++) {
+        const cell = r * cols + c
+        const drop = startAltitude - elevation[cell] - LIFTOFF_MARGIN
+        if (cell === start || drop <= 0) continue
+        const d = Math.fround(drop * glideRatio)
+        if (d < distance[cell]) {
+          distance[cell] = d
+          offset[cell] = d
+          heap.push(d, cell)
+        }
+      }
+    }
+  }
+
   while (heap.size > 0) {
     const d = heap.peekKey()
     const cell = heap.pop()
@@ -119,8 +154,9 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
     if (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) result.truncated = true
 
     const altitude = startAltitude - d / glideRatio
+    const glideStart = offset ? offset[cell] : 0
     // Reached but too low to continue: a final glide only.
-    if (altitude < elevation[cell] + clearanceAt(d)) continue
+    if (altitude < elevation[cell] + clearanceAt(d - glideStart)) continue
 
     for (let k = 0; k < moveCount; k++) {
       const m = MOVES[k]
@@ -138,7 +174,7 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
       // Cells crossed on the way are flown over, so they need the clearance.
       // The arrival altitude is used: conservative, the glider is higher there.
       let blocked = false
-      const required = arrival - clearanceAt(nd)
+      const required = arrival - clearanceAt(nd - glideStart)
       for (const [vc, vr] of m.via) {
         if (elevation[(r + vr) * cols + (c + vc)] > required) {
           blocked = true
@@ -149,6 +185,7 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
 
       distance[next] = nd
       predecessor[next] = cell
+      if (offset) offset[next] = glideStart
       heap.push(nd, next)
     }
   }

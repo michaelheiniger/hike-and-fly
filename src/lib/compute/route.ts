@@ -6,6 +6,7 @@ import type { ReachRequest } from './reach'
 import {
   DEFAULT_MAX_RADIUS,
   groundElevation,
+  groundLaunch,
   loadElevationGrid,
   PlanError,
   startAltitudeFrom,
@@ -46,6 +47,8 @@ export interface RouteOption {
   path: PathPoint[]
   /** The shortest route with the pilot's glide ratio (rather than a required-ratio search). */
   shortestWithGlideRatio: boolean
+  /** Where the glide begins, after the takeoff run: distance along the path (0 without a run) and altitude. */
+  liftoff: { distance: number; altitude: number }
 }
 
 export interface RouteResult {
@@ -196,7 +199,7 @@ export class RoutePlanner {
   }
 
   private async prepare(req: RouteRequest, key: string): Promise<Plan> {
-    const { start, landing, clearance, launchZone, arrivalHeight } = req
+    const { start, landing, clearance, launchZone, takeoffRun, arrivalHeight } = req
     const { maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
     const straightDistance = localDistance(start, landing)
@@ -237,6 +240,7 @@ export class RoutePlanner {
         startAltitude,
         clearance,
         launchZone,
+        takeoffRun: groundLaunch(startAltitude, startElevation) ? takeoffRun : 0,
         target,
         targetElevation: landingElevation,
         arrivalHeight,
@@ -307,5 +311,6 @@ function toOption(plan: Plan, c: Candidate, id: number): RouteOption {
     vertices,
     path,
     shortestWithGlideRatio: c.shortestWithGlideRatio,
+    liftoff: { distance: c.geometry.liftoff.distance, altitude: c.geometry.liftoff.altitude },
   }
 }
