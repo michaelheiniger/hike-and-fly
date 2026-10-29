@@ -31,11 +31,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: npm test
+      # Before the tests: the real-scenario tests run on it.
       - name: Download the elevation archive
         run: gh release download "$TERRAIN_RELEASE" --pattern swissalti3d.pmtiles --dir public/terrain
         env:
           GH_TOKEN: ${{ github.token }}
+      - run: npm test
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
