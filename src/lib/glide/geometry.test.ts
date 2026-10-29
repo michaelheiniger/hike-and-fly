@@ -47,6 +47,42 @@ describe('straightenRoute', () => {
   })
 })
 
+describe('straightenRoute samples', () => {
+  // Ground falling 1 m per meter west of a summit at column 100.
+  const grid = makeGrid(101, 3, (c) => 1000 - (100 - c) * CELL)
+  const ctx = (launchZone: number): RouteContext => ({
+    startAltitude: 1000,
+    clearance: 0,
+    launchZone,
+    start: 101 + 100,
+    target: 101,
+    targetElevation: 0,
+    arrivalHeight: 0,
+  })
+  const cells = Array.from({ length: 101 }, (_, c) => 101 + 100 - c)
+  const at = (samples: { distance: number; elevation: number }[], d: number) => samples.find((s) => s.distance === d)!.elevation
+
+  it('interpolate the terrain within the launch zone', () => {
+    // 15 m out lies between the cells at 10 and 20 m: not as high as the nearer one.
+    const { samples } = straightenRoute(grid, cells, ctx(500), 10)
+    expect(at(samples, 15)).toBe(985)
+    expect(at(samples, 515)).toBe(1000 - 51 * CELL) // its cell
+  })
+
+  it('never read above their cell', () => {
+    // From (0, 2) to (4, 1), passing beside a wall at (0..1, 1).
+    const walled = makeGrid(101, 3, (c, r) => (r === 1 && c <= 1 ? 2000 : 1000 - c * CELL))
+    const { samples } = straightenRoute(walled, [2 * 101, 101 + 4], ctx(500), 10)
+    expect(samples.length).toBeGreaterThan(2)
+    for (const s of samples) expect(s.elevation).toBeLessThanOrEqual(walled.elevation[s.cell])
+  })
+
+  it('take the cell value without a launch zone', () => {
+    const { samples } = straightenRoute(grid, cells, ctx(0), 10)
+    expect(at(samples, 15)).toBe(990) // the cell at 10 m (rounded)
+  })
+})
+
 describe('requiredGlideRatioFor', () => {
   it('is the straight-line ratio over flat ground', () => {
     const grid = makeGrid(101, 101, () => 0)

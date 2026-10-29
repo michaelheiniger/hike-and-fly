@@ -72,7 +72,10 @@ route is shown.
   distance overestimate; paths around obstacle corners stay within ~3 %.
 - **Exact required GR per route.** For a fixed route line, the minimum GR is a closed form
   over samples (~2 per cell): `max(d / (h_start − terrain − clearance(d)))` and the arrival
-  condition. Arrival heights for any GR follow instantly, without searching.
+  condition. Arrival heights for any GR follow instantly, without searching. Within the
+  launch zone, samples interpolate between cell centers (capped at their own cell): one
+  value per cell reads the steep ground just below a summit meters too high, and right
+  after the start a few meters decide the ratio.
 - **Labels.** Each route is described by the side of the straight line it lies on (average
   signed offset) and how far: "South-east side, 1.0 km off", or "Along the straight line".
 

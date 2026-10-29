@@ -19,7 +19,7 @@ export interface RouteSample {
   /** Position in grid coordinates (cell centers are integers). */
   col: number
   row: number
-  /** Terrain of the cell under the sample (m AMSL). */
+  /** Terrain under the sample (m AMSL): its cell's, interpolated within the launch zone. */
   elevation: number
   /** Index of the cell under the sample. */
   cell: number
@@ -47,8 +47,36 @@ function segmentLength(grid: ElevationGrid, c0: number, r0: number, c1: number, 
   return Math.hypot((c1 - c0) * w, (r1 - r0) * grid.cellHeight)
 }
 
-/** Samples along a segment, about two per cell, excluding its first point. */
-function sampleSegment(grid: ElevationGrid, c0: number, r0: number, c1: number, r1: number, d0: number, out: RouteSample[]): void {
+/** Terrain interpolated between the centers of the four cells around a grid position. */
+function interpolatedElevation(grid: ElevationGrid, col: number, row: number): number {
+  const c0 = Math.min(Math.max(Math.floor(col), 0), grid.cols - 2)
+  const r0 = Math.min(Math.max(Math.floor(row), 0), grid.rows - 2)
+  const tc = Math.min(Math.max(col - c0, 0), 1)
+  const tr = Math.min(Math.max(row - r0, 0), 1)
+  const e = grid.elevation
+  const i = r0 * grid.cols + c0
+  return (e[i] * (1 - tc) + e[i + 1] * tc) * (1 - tr) + (e[i + grid.cols] * (1 - tc) + e[i + grid.cols + 1] * tc) * tr
+}
+
+/**
+ * Samples along a segment, about two per cell, excluding its first point. A sample
+ * takes the terrain of its cell, the highest point there, except within `trueUntil`
+ * meters of flight: the launch zone holds true elevations (see `sampleGrid`), which
+ * are interpolated. A cell's single value would put a sample at its edge as high as
+ * its center, and the steep ground just below a summit would read meters too high.
+ * The interpolation never exceeds the cell, which the search flew over: higher ground
+ * beside a takeoff would otherwise lift the first samples above the start.
+ */
+function sampleSegment(
+  grid: ElevationGrid,
+  c0: number,
+  r0: number,
+  c1: number,
+  r1: number,
+  d0: number,
+  trueUntil: number,
+  out: RouteSample[],
+): void {
   const length = segmentLength(grid, c0, r0, c1, r1)
   const steps = Math.max(1, Math.ceil(2 * Math.max(Math.abs(c1 - c0), Math.abs(r1 - r0))))
   for (let k = 1; k <= steps; k++) {
@@ -56,7 +84,10 @@ function sampleSegment(grid: ElevationGrid, c0: number, r0: number, c1: number, 
     const col = c0 + (c1 - c0) * t
     const row = r0 + (r1 - r0) * t
     const cell = Math.round(row) * grid.cols + Math.round(col)
-    out.push({ distance: d0 + length * t, col, row, elevation: grid.elevation[cell], cell })
+    const distance = d0 + length * t
+    const own = grid.elevation[cell]
+    const elevation = distance < trueUntil ? Math.min(own, interpolatedElevation(grid, col, row)) : own
+    out.push({ distance, col, row, elevation, cell })
   }
 }
 
@@ -89,11 +120,11 @@ export function straightenRoute(grid: ElevationGrid, cells: number[], ctx: Route
     let j = i + 1
     while (j + 1 < pos.length) {
       scratch.length = 0
-      sampleSegment(grid, pos[i][0], pos[i][1], pos[j + 1][0], pos[j + 1][1], distance, scratch)
+      sampleSegment(grid, pos[i][0], pos[i][1], pos[j + 1][0], pos[j + 1][1], distance, ctx.launchZone, scratch)
       if (!samplesFlyable(scratch, ctx, glideRatio)) break
       j++
     }
-    sampleSegment(grid, pos[i][0], pos[i][1], pos[j][0], pos[j][1], distance, samples)
+    sampleSegment(grid, pos[i][0], pos[i][1], pos[j][0], pos[j][1], distance, ctx.launchZone, samples)
     distance = samples[samples.length - 1].distance
     vertices.push(pos[j])
     i = j
