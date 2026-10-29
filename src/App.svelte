@@ -13,6 +13,8 @@
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import type { BasemapId } from './lib/map/style'
   import { aglBands, renderAgl } from './lib/render/agl'
+  import ReportDialog from './components/ReportDialog.svelte'
+  import type { ReportContext } from './lib/report'
   import { preferences, savePreferences, settings, writeUrl } from './lib/settings.svelte'
   import { cellAt, gridBounds, type LngLat } from './lib/terrain/geo'
 
@@ -230,6 +232,34 @@
     panelSize = clampPanel(panelHeight + step)
   }
 
+  let reportDialog: ReportDialog
+
+  /** What an issue report attaches: this plan and what the app shows. */
+  function reportContext(): ReportContext {
+    return {
+      settings: $state.snapshot(settings),
+      // The link holds the start, landing, waypoints and every setting (see writeUrl).
+      planUrl: location.href,
+      results: {
+        startElevation: reach?.startElevation ?? route?.startElevation,
+        landingElevation: route?.landingElevation,
+        routes: route?.options.map((o) => ({
+          name: `${String.fromCharCode(65 + o.id)}, ${o.side ? `${o.side.toLowerCase()} side, ${(o.offset / 1000).toFixed(1)} km off` : 'along the straight line'}`,
+          length: o.length,
+          requiredGlideRatio: o.requiredGlideRatio,
+        })),
+        straightGlideRatio: route?.straightLine.glideRatio,
+        reachCellSize: reach?.cellSize,
+        routeCellSize: route?.cellSize,
+        elevationSource: elevationSource ?? undefined,
+        errors: [reachError, routeError].filter((e): e is string => !!e),
+      },
+      version: __APP_VERSION__,
+      userAgent: navigator.userAgent,
+      online,
+    }
+  }
+
   function pick(p: LngLat) {
     if (clickSets === 'waypoint') {
       settings.waypoints = [...settings.waypoints, p]
@@ -368,9 +398,15 @@
             basemap = 'swisstopo'
           }}
         />
+        <section class="report">
+          <button type="button" class="link" onclick={() => reportDialog.open()}>Report an issue</button>
+          <span class="hint">With this plan and its results attached, so the problem can be reproduced.</span>
+        </section>
       {/snippet}
     </AssumptionsPanel>
   </aside>
+
+  <ReportDialog bind:this={reportDialog} context={reportContext} />
 
   {#if !narrow}
     {@render profile('profile-card')}
@@ -449,6 +485,23 @@
   .hint {
     margin: 0;
     color: var(--text-muted);
+  }
+
+  .report {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+  }
+
+  .link {
+    align-self: flex-start;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   .click-mode {

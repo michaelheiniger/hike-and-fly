@@ -209,6 +209,17 @@ centered on the start) and the map is used only for display. The result is drawn
 image overlay with lat/lon corners; over the search extent the residual distortion is
 negligible for display.
 
+### Issue reports
+
+"Report an issue" opens a dialog (category, description, optional reply email) that posts
+to Web3Forms, which emails the report to the maintainer: no account for the reporter, and
+the maintainer's address appears nowhere (the access key is public by design and cannot
+read submissions). Attached: a link that reopens the plan (the URL holds the start,
+landing, waypoints and every setting), the same values as text, what the app showed
+(routes, required GRs, grids, elevation source, errors), the app version (the commit,
+stamped at build time) and the browser. The reporter can read the attached details in the
+dialog before sending. A hidden checkbox catches naive bots.
+
 ## 5. Offline (milestone 5)
 
 - **App shell:** a hand-written service worker (`sw/service-worker.js`) precaches the built

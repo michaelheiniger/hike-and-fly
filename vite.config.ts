@@ -1,4 +1,5 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -40,10 +41,22 @@ function serviceWorker(): Plugin {
   }
 }
 
+/** Commit the app is built from, for issue reports: results change between versions. */
+function appVersion(): string {
+  try {
+    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim()
+    const dirty = execSync('git status --porcelain', { encoding: 'utf8' }).trim() ? '-dirty' : ''
+    return sha + dirty
+  } catch {
+    return 'unknown'
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Where the app is served, e.g. /hike-and-fly/ on GitHub Pages.
   base: process.env.BASE_PATH ?? '/',
   plugins: [svelte(), serviceWorker()],
   worker: { format: 'es' },
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
 })
