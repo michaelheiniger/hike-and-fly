@@ -51,7 +51,7 @@
     </div>
     <div class="row">
       <span class="label">Vertical distance</span>
-      <span class="value">{Math.round(result.startElevation - result.landingElevation)} m</span>
+      <span class="value">{Math.round(result.startAltitude - result.landingElevation)} m</span>
     </div>
     <div class="row">
       <span class="label">Straight distance</span>
