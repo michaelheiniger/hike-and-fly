@@ -3,13 +3,13 @@ import {
   glideLimit,
   requiredGlideRatioFor,
   shareInside,
-  straightenRoute,
+  straightenLegs,
   straightLine,
   type RouteContext,
   type RouteGeometry,
 } from '../glide/geometry'
 import { arriveWith, findRequiredGlideRatio, type ArrivalProblem, type RatioHints } from '../glide/required'
-import { traceRoute, type ElevationGrid } from '../glide/search'
+import type { ElevationGrid } from '../glide/search'
 import { cellAt, localDistance, metersPerDegree, type GeoGrid, type LngLat } from '../terrain/geo'
 import type { ReachRequest } from './reach'
 import {
@@ -26,6 +26,8 @@ import {
 
 export interface RouteRequest extends ReachRequest {
   landing: LngLat
+  /** Points to fly over on the way, in order, with the clearance. */
+  waypoints?: LngLat[]
   /** Required height above the landing on arrival (m). */
   arrivalHeight: number
 }
@@ -56,6 +58,8 @@ export interface RouteOption {
   path: PathPoint[]
   /** The shortest route with the pilot's glide ratio (rather than a required-ratio search). */
   shortestWithGlideRatio: boolean
+  /** Distance along the path of each waypoint (m). */
+  waypoints: number[]
   /** Where the glide begins, after the takeoff run: distance along the path (0 without a run) and altitude. */
   liftoff: { distance: number; altitude: number }
 }
@@ -72,6 +76,7 @@ export interface RouteResult {
   startElevation: number
   startAltitude: number
   landingElevation: number
+  /** Length of the straight line, through the waypoints when there are some (m). */
   straightDistance: number
   straightLine: StraightLine
   /** Distinct routes, smallest required glide ratio first. Empty if none up to MAX_GLIDE_RATIO. */
@@ -179,7 +184,7 @@ export class RoutePlanner {
   private searchRequired(plan: Plan, grid: ElevationGrid, hints: RatioHints): Candidate | null {
     const found = findRequiredGlideRatio(grid, plan.problem, plan.straightDistance, undefined, hints)
     if (!found) return null
-    const geometry = straightenRoute(grid, traceRoute(found.result, plan.problem.target), plan.ctx, found.glideRatio)
+    const geometry = straightenLegs(grid, found.legs, plan.ctx, found.glideRatio)
     return {
       geometry,
       required: requiredGlideRatioFor(geometry, plan.ctx),
@@ -197,7 +202,7 @@ export class RoutePlanner {
     const { elevationGrid } = plan.prepared
     const arrival = arriveWith(elevationGrid, plan.problem, glideRatio)
     if (arrival.ok) {
-      const geometry = straightenRoute(elevationGrid, traceRoute(arrival.result, plan.problem.target), plan.ctx, glideRatio)
+      const geometry = straightenLegs(elevationGrid, arrival.legs, plan.ctx, glideRatio)
       const same = candidates.find((c) => c.mask && shareInside(geometry, c.mask, plan.keepClear) > 0.5)
       if (same) same.shortestWithGlideRatio = true
       else {
@@ -231,13 +236,16 @@ export class RoutePlanner {
   }
 
   private async prepare(req: RouteRequest, key: string): Promise<Plan> {
-    const { start, landing, clearance, launchZone, takeoffRun, arrivalHeight } = req
+    const { start, landing, waypoints = [], clearance, launchZone, takeoffRun, arrivalHeight } = req
     const { maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
-    const straightDistance = localDistance(start, landing)
-    if (straightDistance < 50) throw new PlanError('The landing is too close to the start.')
+    // Through the waypoints when there are some: no route is shorter.
+    const points = [start, ...waypoints, landing]
+    let straightDistance = 0
+    for (let i = 1; i < points.length; i++) straightDistance += localDistance(points[i - 1], points[i])
+    if (localDistance(start, landing) < 50) throw new PlanError('The landing is too close to the start.')
     if (straightDistance > 1.5 * maxRadius) {
-      throw new PlanError(`The landing is ${Math.round(straightDistance / 1000)} km away: too far to plan.`)
+      throw new PlanError(`The route is ${Math.round(straightDistance / 1000)} km long: too far to plan.`)
     }
     const [startElevation, landingElevation] = await Promise.all([
       groundElevation(start, this.loadTiles, this.options),
@@ -246,9 +254,16 @@ export class RoutePlanner {
     const startAltitude = startAltitudeFrom(req.startHeight, req.startHeightMode, startElevation)
     const run = groundLaunch(startAltitude, startElevation) ? takeoffRun : 0
 
-    // Centered between start and landing, with room for detours on all sides.
-    const center = { lng: (start.lng + landing.lng) / 2, lat: (start.lat + landing.lat) / 2 }
-    const radius = Math.min(maxRadius, straightDistance / 2 + Math.max(3000, 0.5 * straightDistance))
+    // Centered on the points' box, with room for detours on all sides: as much as the box
+    // spans. Half its diagonal covers every point (for start and landing alone: half
+    // their distance).
+    const lngs = points.map((p) => p.lng)
+    const lats = points.map((p) => p.lat)
+    const sw = { lng: Math.min(...lngs), lat: Math.min(...lats) }
+    const ne = { lng: Math.max(...lngs), lat: Math.max(...lats) }
+    const center = { lng: (sw.lng + ne.lng) / 2, lat: (sw.lat + ne.lat) / 2 }
+    const span = localDistance(sw, ne) / 2
+    const radius = Math.min(maxRadius, span + Math.max(3000, span))
     const prepared = await loadElevationGrid(center, radius, start, launchZone, startElevation, this.loadTiles, {
       ...this.options,
       maxCells: ROUTE_MAX_CELLS,
@@ -258,6 +273,11 @@ export class RoutePlanner {
     const l = cellAt(grid, landing)!
     const startCell = s.row * grid.cols + s.col
     const target = l.row * grid.cols + l.col
+    const waypointCells = waypoints.map((p) => {
+      const c = cellAt(grid, p)
+      if (!c) throw new PlanError('A waypoint is too far from the start and landing to plan.')
+      return c.row * grid.cols + c.col
+    })
     // Start and landing cells hold their true elevation (the grid keeps the max).
     const { elevation } = elevationGrid
     elevation[startCell] = Math.min(elevation[startCell], startAltitude)
@@ -265,7 +285,7 @@ export class RoutePlanner {
 
     const corridor = Math.min(1500, Math.max(300, 0.1 * straightDistance))
     const ctx: RouteContext = { startAltitude, clearance, launchZone, start: startCell, target, targetElevation: landingElevation, arrivalHeight }
-    const straight = glideLimit(straightLine(elevationGrid, ctx, run), ctx)
+    const straight = glideLimit(straightLine(elevationGrid, ctx, run, waypointCells), ctx)
     return {
       key,
       prepared,
@@ -276,6 +296,7 @@ export class RoutePlanner {
         clearance,
         launchZone,
         takeoffRun: run,
+        waypoints: waypointCells,
         target,
         targetElevation: landingElevation,
         arrivalHeight,
@@ -351,5 +372,6 @@ function toOption(plan: Plan, c: Candidate, id: number): RouteOption {
     path,
     shortestWithGlideRatio: c.shortestWithGlideRatio,
     liftoff: { distance: c.geometry.liftoff.distance, altitude: c.geometry.liftoff.altitude },
+    waypoints: c.geometry.waypoints,
   }
 }

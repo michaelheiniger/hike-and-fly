@@ -12,7 +12,7 @@
  * Skipped without the archive (public/terrain/swissalti3d.pmtiles, see tools/terrain).
  */
 import { beforeAll, describe, expect, it } from 'vitest'
-import { cellAt, type LngLat } from '../terrain/geo'
+import { cellAt, localDistance, type LngLat } from '../terrain/geo'
 import { archiveTiles, hasArchive } from './archive.testing'
 import { computeReach } from './reach'
 import { RoutePlanner, type RouteRequest } from './route'
@@ -242,6 +242,52 @@ describe.skipIf(!hasArchive)('real scenarios', () => {
       expect(reach.agl[i]).toBeCloseTo(s.reachAgl, 0)
       // Never higher than a straight glide over the true landing ground.
       expect(reach.agl[i]).toBeLessThanOrEqual(startAltitude - s.geodesic / glideRatio - s.landingElevation + 0.5)
+    })
+  })
+
+  describe('with waypoints', () => {
+    const scenario = (prefix: string) => SCENARIOS.find((s) => s.name.startsWith(prefix))!
+    const plan = (s: Scenario, waypoints: LngLat[]) => {
+      const exact = (p: LngLat) => Promise.resolve(p === s.start ? s.startElevation : s.landingElevation)
+      return new RoutePlanner(loadTiles, { ...options, pointElevation: exact }).plan({
+        start: s.start,
+        landing: s.landing,
+        waypoints,
+        startHeight: s.startHeight ?? 0,
+        startHeightMode: s.startHeightMode ?? 'agl',
+        glideRatio: s.glideRatio ?? 5,
+        ...ASSUMPTIONS,
+      })
+    }
+
+    it('changes nothing with a waypoint on the best route', { timeout: 60_000 }, async () => {
+      // Niesen to Frutigen goes straight: a waypoint halfway along the line.
+      const s = scenario('Niesen')
+      const halfway = { lng: (s.start.lng + s.landing.lng) / 2, lat: (s.start.lat + s.landing.lat) / 2 }
+      const result = await plan(s, [halfway])
+      const [best] = result.options
+      expect(best.requiredGlideRatio / s.routes[0][1]).toBeCloseTo(1, 2)
+      expect(best.waypoints).toHaveLength(1)
+      expect(best.waypoints[0] / best.length).toBeCloseTo(0.5, 1)
+      expect(Math.abs(result.straightDistance - s.geodesic)).toBeLessThan(1)
+    })
+
+    it('takes the side of a waypoint', { timeout: 60_000 }, async () => {
+      // The thermal over First goes north of the Faulhorn chain; a waypoint over
+      // Zweilütschinen, in the valley south of it, makes it go south.
+      const s = scenario('Thermal')
+      const zweilutschinen = { lng: 7.902909, lat: 46.632521 }
+      const result = await plan(s, [zweilutschinen])
+      const [best] = result.options
+      const southAlternative = s.routes.find(([side]) => side === 'South')![1]
+      expect(best.side).toBe('South')
+      expect(best.requiredGlideRatio).toBeGreaterThanOrEqual(0.99 * southAlternative)
+      expect(best.requiredGlideRatio).toBeGreaterThan(s.routes[0][1])
+      // It flies over the waypoint: a corner of the route is in its cell.
+      const near = best.vertices.some((v) => localDistance(v, zweilutschinen) < result.cellSize)
+      expect(near).toBe(true)
+      // The straight line through the waypoint is longer than the direct one.
+      expect(result.straightDistance).toBeGreaterThan(s.geodesic)
     })
   })
 })

@@ -41,6 +41,8 @@ export interface RouteGeometry {
   /** Distance from the start, run and glide (m). */
   length: number
   liftoff: Liftoff
+  /** Distance along the route of each waypoint flown over (m). */
+  waypoints: number[]
 }
 
 /**
@@ -143,6 +145,7 @@ export function straightenRoute(grid: ElevationGrid, cells: number[], ctx: Route
     samples: [startSample, ...run, ...glide.samples.slice(1).map((s) => ({ ...s, distance: s.distance + runLength }))],
     length: runLength + glide.length,
     liftoff: { ...glide.liftoff, distance: runLength },
+    waypoints: [],
   }
 }
 
@@ -172,7 +175,7 @@ function straightenGlide(grid: ElevationGrid, cells: number[], ctx: RouteContext
   const first = pos[0]
   const startSample: RouteSample = { distance: 0, col: first[0], row: first[1], elevation: grid.elevation[cells[0]], cell: cells[0] }
   const liftoff = { distance: 0, altitude: ctx.startAltitude, cell: cells[0] }
-  return { vertices, samples: [startSample, ...samples], length: distance, liftoff }
+  return { vertices, samples: [startSample, ...samples], length: distance, liftoff, waypoints: [] }
 }
 
 /**
@@ -208,18 +211,43 @@ export function glideLimit(route: RouteGeometry, ctx: RouteContext): { glideRati
 }
 
 /**
- * The straight line from the start to the landing, whatever the terrain. On a ground
- * launch (`takeoffRun` > 0) the pilot runs along it and lifts off where the line then
- * needs the smallest glide ratio, at the ground there and never above the start.
+ * A grid route through waypoints, one cell list per leg (see `arriveWith`): each leg
+ * straightened on its own, so no shortcut skips a waypoint, then joined. Legs after
+ * the first start in the air, with the full clearance.
  */
-export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun: number): RouteGeometry {
+export function straightenLegs(grid: ElevationGrid, legs: number[][], ctx: RouteContext, glideRatio: number): RouteGeometry {
+  const route = straightenRoute(grid, legs[0], { ...ctx, target: legs.length > 1 ? -1 : ctx.target }, glideRatio)
+  for (const leg of legs.slice(1)) {
+    const offset = route.length
+    const startAltitude = altitudeAt(route.liftoff, ctx.startAltitude, glideRatio, offset)
+    const next = straightenGlide(grid, leg, { ...ctx, start: leg[0], startAltitude, launchZone: 0 }, glideRatio)
+    route.waypoints.push(offset)
+    route.vertices.push(...next.vertices.slice(1))
+    for (const s of next.samples.slice(1)) route.samples.push({ ...s, distance: s.distance + offset })
+    route.length = offset + next.length
+  }
+  return route
+}
+
+/**
+ * The straight line from the start to the landing, whatever the terrain, through the
+ * waypoints (`via`, cells) when there are some. On a ground launch (`takeoffRun` > 0)
+ * the pilot runs along it and lifts off where the line then needs the smallest glide
+ * ratio, at the ground there and never above the start.
+ */
+export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun: number, via: number[] = []): RouteGeometry {
   const at = (cell: number): [number, number] => [cell % grid.cols, Math.floor(cell / grid.cols)]
-  const [c0, r0] = at(ctx.start)
-  const [c1, r1] = at(ctx.target)
+  const points = [ctx.start, ...via, ctx.target].map(at)
+  const [c0, r0] = points[0]
   const samples: RouteSample[] = [{ distance: 0, col: c0, row: r0, elevation: grid.elevation[ctx.start], cell: ctx.start }]
-  sampleSegment(grid, c0, r0, c1, r1, 0, ctx.launchZone, samples)
+  const waypoints: number[] = []
+  for (let i = 1; i < points.length; i++) {
+    if (i > 1) waypoints.push(samples[samples.length - 1].distance)
+    const [a, b] = [points[i - 1], points[i]]
+    sampleSegment(grid, a[0], a[1], b[0], b[1], samples[samples.length - 1].distance, ctx.launchZone, samples)
+  }
   const length = samples[samples.length - 1].distance
-  const route = (liftoff: Liftoff): RouteGeometry => ({ vertices: [[c0, r0], [c1, r1]], samples, length, liftoff })
+  const route = (liftoff: Liftoff): RouteGeometry => ({ vertices: points, samples, length, liftoff, waypoints })
 
   let best = route({ distance: 0, altitude: ctx.startAltitude, cell: ctx.start })
   let bestRatio = requiredGlideRatioFor(best, ctx)
@@ -235,15 +263,20 @@ export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun:
   return best
 }
 
+/** True within `keepClear` (m) of the route's ends or waypoints, which other routes must reach too. */
+function nearStop(route: RouteGeometry, d: number, keepClear: number): boolean {
+  return d < keepClear || route.length - d < keepClear || route.waypoints.some((w) => Math.abs(d - w) < keepClear)
+}
+
 /**
  * Marks cells within `radius` (m) of the route, except within `keepClear` (m)
- * of its two ends: a corridor to block when looking for another way around.
+ * of its ends and waypoints: a corridor to block when looking for another way around.
  */
 export function corridorMask(grid: ElevationGrid, route: RouteGeometry, radius: number, keepClear: number): Uint8Array {
   const mask = new Uint8Array(grid.cols * grid.rows)
   const rCells = Math.ceil(radius / grid.cellHeight)
   for (const s of route.samples) {
-    if (s.distance < keepClear || route.length - s.distance < keepClear) continue
+    if (nearStop(route, s.distance, keepClear)) continue
     const c0 = Math.round(s.col)
     const r0 = Math.round(s.row)
     for (let dr = -rCells; dr <= rCells; dr++) {
@@ -261,12 +294,12 @@ export function corridorMask(grid: ElevationGrid, route: RouteGeometry, radius: 
   return mask
 }
 
-/** Share of the route's samples (away from its ends) inside a mask. */
+/** Share of the route's samples (away from its ends and waypoints) inside a mask. */
 export function shareInside(route: RouteGeometry, mask: Uint8Array, keepClear: number): number {
   let inside = 0
   let total = 0
   for (const s of route.samples) {
-    if (s.distance < keepClear || route.length - s.distance < keepClear) continue
+    if (nearStop(route, s.distance, keepClear)) continue
     total++
     inside += mask[s.cell]
   }

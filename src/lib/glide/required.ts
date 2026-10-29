@@ -1,28 +1,48 @@
-import { searchGlide, type ElevationGrid, type GlideParams, type GlideResult } from './search'
+import { searchGlide, traceRoute, type ElevationGrid, type GlideParams } from './search'
 
-export interface ArrivalProblem extends Omit<GlideParams, 'glideRatio' | 'target'> {
+export interface ArrivalProblem extends Omit<GlideParams, 'glideRatio' | 'target' | 'startDistance'> {
   target: number
   /** Ground elevation at the landing (m AMSL). */
   targetElevation: number
   /** Required height above the landing on arrival (m). */
   arrivalHeight: number
+  /** Cells to fly over on the way, in order, each with the clearance to glide on. */
+  waypoints?: number[]
 }
 
 export interface Arrival {
   glideRatio: number
-  result: GlideResult
+  /** Cells of the shortest route, one list per leg (start or liftoff, waypoints, landing); empty when not reached. */
+  legs: number[][]
   /** Height above the landing on arrival (m), -Infinity when the landing cannot be reached at all. */
   arrivalAgl: number
   /** True when the landing is reached with at least the arrival height. */
   ok: boolean
 }
 
-/** Searches up to the landing with a given glide ratio. */
+/**
+ * Searches up to the landing with a given glide ratio, through the waypoints in
+ * order. Being higher is never worse, so each leg is the shortest from where the
+ * last one arrived: a leg starts at its waypoint with the distance flown so far.
+ */
 export function arriveWith(grid: ElevationGrid, problem: ArrivalProblem, glideRatio: number): Arrival {
-  const result = searchGlide(grid, { ...problem, glideRatio })
-  const d = result.distance[problem.target]
-  const arrivalAgl = d === Infinity ? -Infinity : problem.startAltitude - d / glideRatio - problem.targetElevation
-  return { glideRatio, result, arrivalAgl, ok: arrivalAgl >= problem.arrivalHeight }
+  const { waypoints = [], target } = problem
+  const legs: number[][] = []
+  let startCol = problem.startCol
+  let startRow = problem.startRow
+  let startDistance = 0
+  for (const stop of [...waypoints, target]) {
+    // The takeoff run belongs to the first leg only.
+    const takeoffRun = legs.length ? 0 : problem.takeoffRun
+    const result = searchGlide(grid, { ...problem, startCol, startRow, takeoffRun, startDistance, glideRatio, target: stop })
+    startDistance = result.distance[stop]
+    if (startDistance === Infinity) return { glideRatio, legs: [], arrivalAgl: -Infinity, ok: false }
+    legs.push(traceRoute(result, stop))
+    startCol = stop % grid.cols
+    startRow = Math.floor(stop / grid.cols)
+  }
+  const arrivalAgl = problem.startAltitude - startDistance / glideRatio - problem.targetElevation
+  return { glideRatio, legs, arrivalAgl, ok: arrivalAgl >= problem.arrivalHeight }
 }
 
 /** Highest glide ratio considered: beyond any paraglider. */

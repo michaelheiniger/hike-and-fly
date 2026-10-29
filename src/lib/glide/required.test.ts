@@ -103,6 +103,35 @@ describe('findRequiredGlideRatio', () => {
     })
   })
 
+  describe('through waypoints', () => {
+    const flat = makeGrid(101, 101, () => 0)
+    const waypoint = 90 * flat.cols + 50 // 400 m off the straight line, halfway
+
+    it('flies over them in order', () => {
+      const arrival = arriveWith(flat, { ...problem(flat), waypoints: [waypoint] }, 5)
+      expect(arrival.legs).toHaveLength(2)
+      expect(arrival.legs[0].at(-1)).toBe(waypoint)
+      expect(arrival.legs[1][0]).toBe(waypoint)
+      expect(arrival.legs[1].at(-1)).toBe(problem(flat).target)
+    })
+
+    it('need the detour they impose', () => {
+      // 2 × 640 m instead of 1000 m, with 900 m to lose.
+      const found = findRequiredGlideRatio(flat, { ...problem(flat), waypoints: [waypoint] }, 2 * Math.hypot(500, 400))!
+      const detour = 2 * Math.hypot(500, 400)
+      expect(found.glideRatio).toBeGreaterThanOrEqual((detour / 900) * 0.999)
+      expect(found.glideRatio).toBeLessThan((detour / 900) * 1.04)
+    })
+
+    it('must be flown over with the clearance', () => {
+      // A 990 m tower 500 m out with 50 m clearance: never 1040 m high there.
+      const tower = makeGrid(101, 101, (c, r) => (c === 50 && r === 50 ? 990 : 0))
+      const p = { ...problem(tower), clearance: 50 }
+      expect(findRequiredGlideRatio(tower, p, 1000)).not.toBeNull() // around it
+      expect(findRequiredGlideRatio(tower, { ...p, waypoints: [50 * tower.cols + 50] }, 1000)).toBeNull()
+    })
+  })
+
   it('returns null when the landing is above the start', () => {
     const grid = makeGrid(101, 101, () => 0)
     expect(findRequiredGlideRatio(grid, { ...problem(grid), targetElevation: 950 }, 1000)).toBeNull()

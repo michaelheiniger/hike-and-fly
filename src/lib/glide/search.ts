@@ -32,6 +32,8 @@ export interface GlideParams {
    * for a start in the air.
    */
   takeoffRun?: number
+  /** Distance already flown at the start (m): a leg starting at a waypoint. */
+  startDistance?: number
   /** Stop as soon as the shortest distance to this cell is known. */
   target?: number
 }
@@ -90,7 +92,7 @@ export const LIFTOFF_MARGIN = 0.01
  */
 export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResult {
   const { cols, rows, elevation, cellHeight, rowCellWidth } = grid
-  const { startCol, startRow, glideRatio, clearance, launchZone, takeoffRun = 0, target = -1 } = params
+  const { startCol, startRow, glideRatio, clearance, launchZone, takeoffRun = 0, startDistance = 0, target = -1 } = params
   const cellCount = cols * rows
 
   const distance = new Float32Array(cellCount).fill(Infinity)
@@ -118,8 +120,8 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
   }
 
   const heap = new MinHeap(Math.max(1024, cellCount >> 2))
-  distance[start] = 0
-  heap.push(0, start)
+  distance[start] = Math.fround(startDistance)
+  heap.push(distance[start], start)
 
   // Liftoffs after running down: at the ground, a hair above so the glide can go on.
   // The clearance ramps from each liftoff, so `offset` keeps where its glide began.
