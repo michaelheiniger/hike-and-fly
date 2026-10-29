@@ -46,7 +46,8 @@ export interface RatioHints {
  * even MAX_GLIDE_RATIO does not. Reachability is monotonic in the glide ratio
  * (a better glider is higher everywhere), so ratios are tried on a grid of
  * `precision` and the smallest reaching one is bracketed: guesses from the hints,
- * growing until one reaches, then a bisection down to the last failure. The
+ * growing until one reaches, then a bisection down to the last failure. After two
+ * misses MAX_GLIDE_RATIO is tried, so an unreachable landing is known quickly. The
  * result is the same whatever the guesses; good ones only save searches. It is
  * rounded up to `precision`: conservative.
  */
@@ -71,16 +72,24 @@ export function findRequiredGlideRatio(
 
   let best: Arrival | null = null
   let bestK = 0
+  /** The search at MAX_GLIDE_RATIO, once tried. */
+  let ceiling: Arrival | null = null
+  let misses = 0
   let k = Math.max(fail + 1, step(Math.max(bound, hints.estimate ?? 0, hints.atLeast ?? 0) * GRID_SLACK))
   while (!best) {
     k = Math.min(k, last)
-    const arrival = attempt(k)
+    const arrival = k === last && ceiling ? ceiling : attempt(k)
     if (arrival.ok) {
       best = arrival
       bestK = k
     } else {
       if (k >= last) return null
       fail = k
+      // Far off the guess: first make sure the landing can be reached at all.
+      if (++misses === 2) {
+        ceiling = attempt(last)
+        if (!ceiling.ok) return null
+      }
       k = Math.max(k + 1, Math.ceil(k * GUESS_GROWTH))
     }
   }

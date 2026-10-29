@@ -110,6 +110,9 @@ describe('findRequiredGlideRatio', () => {
 
   it('returns null when the landing is enclosed', () => {
     const grid = makeGrid(101, 101, (c) => (c === 50 ? 5000 : 0))
+    calls.n = 0
     expect(findRequiredGlideRatio(grid, problem(grid), 1000)).toBeNull()
+    // Two guesses, then the largest ratio: no climb through all the guesses up to it.
+    expect(calls.n).toBe(3)
   })
 })

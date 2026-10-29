@@ -47,7 +47,8 @@ and it has to go around. Reachability is monotonic in GR (reachable at GR g ⇒ 
 any g' > g), so the minimum GR is found by **binary search** over multiples of 0.05, running
 the search for each candidate. The first guess is the straight line over the terrain plus the
 grid's ~3 % overestimate; guesses grow by a quarter until one reaches the landing, then a
-bisection closes the gap. The result is the same whatever the guesses (monotonicity), they
+bisection closes the gap. After two misses GR 25 (beyond any paraglider) is tried: if even
+it fails, the landing is unreachable, known after 3 searches. The result is the same whatever the guesses (monotonicity), they
 only save searches: ~6 instead of ~11 on the real scenarios, and the costly searches at high
 GR are avoided (search time −65 %). Alternatives start from the previous route's ratio, as a
 more blocked grid never needs less. If the straight line is clear, the result equals
