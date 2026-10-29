@@ -1,10 +1,13 @@
 import type { HeightMode } from './compute/terrain'
 import type { ColorScheme } from './render/agl'
 import type { LngLat } from './terrain/geo'
+import { formatWaypoints, parseWaypoints } from './waypoints'
 
 export interface Settings {
   start: LngLat | null
   landing: LngLat | null
+  /** Points to fly over on the way to the landing, in order. */
+  waypoints: LngLat[]
   startHeight: number
   startHeightMode: HeightMode
   glideRatio: number
@@ -14,7 +17,7 @@ export interface Settings {
   arrivalHeight: number
 }
 
-export const DEFAULTS: Omit<Settings, 'start' | 'landing'> = {
+export const DEFAULTS: Omit<Settings, 'start' | 'landing' | 'waypoints'> = {
   startHeight: 0,
   startHeightMode: 'agl',
   glideRatio: 5,
@@ -72,6 +75,7 @@ function readUrl(): Settings {
   return {
     start: point('lat', 'lng'),
     landing: point('llat', 'llng'),
+    waypoints: parseWaypoints(p.get('wp')),
     startHeight: num('h', DEFAULTS.startHeight, LIMITS.startHeight),
     startHeightMode: p.get('hm') === 'amsl' ? 'amsl' : 'agl',
     glideRatio: roundGlideRatio(num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio)),
@@ -92,6 +96,7 @@ export function writeUrl(s: Settings): void {
     p.set('llat', s.landing.lat.toFixed(5))
     p.set('llng', s.landing.lng.toFixed(5))
   }
+  if (s.waypoints.length) p.set('wp', formatWaypoints(s.waypoints))
   // Every setting is written, so a link keeps its values when the defaults change.
   p.set('h', `${s.startHeight}`)
   p.set('hm', s.startHeightMode)

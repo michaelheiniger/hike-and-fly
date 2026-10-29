@@ -10,13 +10,17 @@
     error: string | null
     glideRatio: number
     arrivalHeight: number
+    /** Waypoints the routes fly over. */
+    waypointCount: number
     selected: number | null
     onselect: (id: number) => void
     onclear: () => void
   }
 
-  let { result, computing, searchingAlternatives, error, glideRatio, arrivalHeight, selected, onselect, onclear }: Props =
+  let { result, computing, searchingAlternatives, error, glideRatio, arrivalHeight, waypointCount, selected, onselect, onclear }: Props =
     $props()
+
+  const via = $derived(waypointCount ? ` via ${waypointCount === 1 ? 'the waypoint' : `the ${waypointCount} waypoints`}` : '')
 
   /** Rounded up: the conservative side. */
   const up = (gr: number) => (Math.ceil(gr * 10 - 1e-9) / 10).toFixed(1)
@@ -69,12 +73,12 @@
       <span class="value">{Math.round(result.startAltitude - result.landingElevation)} m</span>
     </div>
     <div class="row">
-      <span class="label">Straight distance</span>
+      <span class="label">Straight distance{via}</span>
       <span class="value">{(result.straightDistance / 1000).toFixed(1)} km</span>
     </div>
     {#if straightRatio !== null}
       <div class="row">
-        <span class="label">Straight line</span>
+        <span class="label">Straight line{via}</span>
         <span class="value">needs {up(straightRatio)}</span>
       </div>
       <span class="muted">Distance over height, with {arrivalHeight} m above the landing. {terrainNote}</span>
@@ -85,7 +89,12 @@
       {#if best}
         <span class="number">{up(best.requiredGlideRatio)}</span>
         <span class="muted">
-          {#if !best.side}
+          {#if waypointCount}
+            Through {waypointCount === 1 ? 'the waypoint' : `the ${waypointCount} waypoints`}, in order; the straight line{via}
+            {result.straightLine.glideRatio === Infinity
+              ? 'is blocked by terrain'
+              : `would need ${up(result.straightLine.glideRatio)}`}.
+          {:else if !best.side}
             Along the straight line.
           {:else}
             Around terrain on the {best.side.toLowerCase()} side; the straight line
@@ -101,7 +110,7 @@
           {#if straightRatio === null}
             The landing is not below the start (with {arrivalHeight} m arrival height).
           {:else}
-            Not reachable even with glide ratio {MAX_GLIDE_RATIO}: terrain blocks every route.
+            Not reachable even with glide ratio {MAX_GLIDE_RATIO}: terrain blocks every route{via}.
           {/if}
         </span>
       {/if}

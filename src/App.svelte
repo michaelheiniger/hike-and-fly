@@ -6,6 +6,7 @@
   import Profile from './components/Profile.svelte'
   import RouteSummary from './components/RouteSummary.svelte'
   import OfflinePanel from './components/OfflinePanel.svelte'
+  import Waypoints from './components/Waypoints.svelte'
   import type { Bounds } from './lib/offline/areas'
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
@@ -16,7 +17,7 @@
   import { cellAt, gridBounds, type LngLat } from './lib/terrain/geo'
 
   let basemap: BasemapId = $state('swisstopo')
-  let clickSets: 'start' | 'landing' = $state(settings.start && !settings.landing ? 'landing' : 'start')
+  let clickSets: 'start' | 'waypoint' | 'landing' = $state(settings.start && !settings.landing ? 'landing' : 'start')
 
   let overlay = $state<Overlay | null>(null)
   let reach = $state.raw<ReachResult | null>(null)
@@ -92,7 +93,7 @@
     }
     const timer = setTimeout(() => {
       client.reach(reachReq)
-      if (landing) client.route({ ...reachReq, landing, arrivalHeight: s.arrivalHeight })
+      if (landing) client.route({ ...reachReq, landing, waypoints: s.waypoints, arrivalHeight: s.arrivalHeight })
     }, 150)
     return () => clearTimeout(timer)
   })
@@ -230,7 +231,9 @@
   }
 
   function pick(p: LngLat) {
-    if (clickSets === 'landing') {
+    if (clickSets === 'waypoint') {
+      settings.waypoints = [...settings.waypoints, p]
+    } else if (clickSets === 'landing') {
       settings.landing = p
     } else {
       settings.start = p
@@ -262,6 +265,7 @@
   <MapView
     start={settings.start}
     landing={settings.landing}
+    waypoints={settings.waypoints}
     routes={routeLines}
     onselectroute={(id) => (selectedRoute = id)}
     {highlight}
@@ -274,6 +278,7 @@
     onpick={pick}
     onmovestart={(p) => (settings.start = p)}
     onmovelanding={(p) => (settings.landing = p)}
+    onmovewaypoint={(i, p) => (settings.waypoints = settings.waypoints.map((w, j) => (j === i ? p : w)))}
     onhover={(p) => (hover = p)}
   />
 
@@ -305,6 +310,7 @@
           <span>Click on the map sets</span>
           <span class="segmented" role="group" aria-label="Click on the map sets">
             <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>Start</button>
+            <button type="button" aria-pressed={clickSets === 'waypoint'} onclick={() => (clickSets = 'waypoint')}>Waypoint</button>
             <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>Landing</button>
           </span>
         </div>
@@ -322,6 +328,13 @@
       bind:basemap
     >
       {#snippet landing()}
+        {#if settings.waypoints.length}
+          <Waypoints
+            waypoints={settings.waypoints}
+            onremove={(i) => (settings.waypoints = settings.waypoints.filter((_, j) => j !== i))}
+            onclear={() => (settings.waypoints = [])}
+          />
+        {/if}
         {#if settings.landing}
           <RouteSummary
             result={route}
@@ -330,6 +343,7 @@
             error={routeError}
             glideRatio={judgedRatio}
             arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
+            waypointCount={routeRequest?.waypoints?.length ?? 0}
             selected={shownRoute?.id ?? null}
             onselect={(id) => (selectedRoute = id)}
             onclear={() => {

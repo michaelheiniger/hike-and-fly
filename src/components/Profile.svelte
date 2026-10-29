@@ -287,6 +287,12 @@
           <path class="glide" d={run.d} stroke={run.color} />
         {/each}
 
+        <!-- Waypoints, numbered in order. -->
+        {#each route.waypoints as w, i (i)}
+          <line class="waypoint" x1={x(w)} x2={x(w)} y1={margin.top} y2={margin.top + plotH} />
+          <text class="waypoint-label" x={x(w) + 3} y={margin.top + 10}>{i + 1}</text>
+        {/each}
+
         <!-- Arrival height at the landing. -->
         <line class="reserve" x1={x(length) - 8} x2={x(length)} y1={y(landingElevation + arrivalHeight)} y2={y(landingElevation + arrivalHeight)} />
       </g>
@@ -425,6 +431,17 @@
     stroke-width: 3;
     stroke-linejoin: round;
     stroke-linecap: round;
+  }
+
+  .waypoint {
+    stroke: #2a78d6;
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+  }
+
+  .waypoint-label {
+    fill: #2a78d6;
+    font: 600 11px system-ui, sans-serif;
   }
 
   .reserve {

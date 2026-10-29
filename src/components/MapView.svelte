@@ -28,6 +28,8 @@
   interface Props {
     start: LngLat | null
     landing: LngLat | null
+    /** Points to fly over on the way, numbered in order. */
+    waypoints: LngLat[]
     routes: RouteLine[]
     /** Point highlighted from the profile chart. */
     highlight: LngLat | null
@@ -42,11 +44,29 @@
     onselectroute: (id: number) => void
     onmovestart: (p: LngLat) => void
     onmovelanding: (p: LngLat) => void
+    onmovewaypoint: (index: number, p: LngLat) => void
     onhover: (p: LngLat | null) => void
   }
 
-  let { start, landing, routes, highlight, overlay, basemap, showSlope, ontoggleslope, fitTo, onviewchange, onpick, onselectroute, onmovestart, onmovelanding, onhover }: Props =
-    $props()
+  let {
+    start,
+    landing,
+    waypoints,
+    routes,
+    highlight,
+    overlay,
+    basemap,
+    showSlope,
+    ontoggleslope,
+    fitTo,
+    onviewchange,
+    onpick,
+    onselectroute,
+    onmovestart,
+    onmovelanding,
+    onmovewaypoint,
+    onhover,
+  }: Props = $props()
 
   let container: HTMLDivElement
   let map: Map | undefined = $state()
@@ -56,6 +76,7 @@
   let routeBadges: Marker[] = []
   let startMarker: Marker | undefined
   let landingMarker: Marker | undefined
+  let waypointMarkers: Marker[] = []
 
   /** Throws when the browser cannot create a WebGL context. */
   function createMap(): Map {
@@ -192,6 +213,31 @@
     landingMarker = syncMarker(landingMarker, landing, '#2a78d6', onmovelanding)
   })
 
+  // Markers by position in the list: removing one renumbers the ones after it.
+  $effect(() => {
+    const m = map
+    if (!m) return
+    while (waypointMarkers.length > waypoints.length) waypointMarkers.pop()!.remove()
+    waypoints.forEach((p, i) => {
+      let marker = waypointMarkers[i]
+      if (!marker) {
+        const el = document.createElement('div')
+        el.className = 'waypoint-marker'
+        el.textContent = `${i + 1}`
+        el.title = `Waypoint ${i + 1}: drag to move`
+        marker = new Marker({ element: el, draggable: true }).setLngLat([p.lng, p.lat]).addTo(m)
+        const dragged = marker
+        dragged.on('dragend', () => {
+          const q = dragged.getLngLat()
+          onmovewaypoint(i, { lng: q.lng, lat: q.lat })
+        })
+        waypointMarkers[i] = marker
+      } else {
+        marker.setLngLat([p.lng, p.lat])
+      }
+    })
+  })
+
   $effect(() => {
     if (!map || !loaded) return
     const features = routes.map((r) => ({
@@ -307,6 +353,19 @@
     color: #ffffff;
     font: 600 12px/1 system-ui, sans-serif;
     cursor: pointer;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  }
+
+  .map :global(.waypoint-marker) {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    background: #2a78d6;
+    color: #ffffff;
+    font: 600 11px/20px system-ui, sans-serif;
+    text-align: center;
+    cursor: grab;
     box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
   }
 
