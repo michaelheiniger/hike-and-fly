@@ -76,7 +76,7 @@ export interface RouteResult {
   startElevation: number
   startAltitude: number
   landingElevation: number
-  /** Length of the straight line, through the waypoints when there are some (m). */
+  /** Length of the straight line from the start to the landing, whatever the waypoints (m). */
   straightDistance: number
   straightLine: StraightLine
   /** Distinct routes, smallest required glide ratio first. Empty if none up to MAX_GLIDE_RATIO. */
@@ -111,6 +111,8 @@ interface Plan {
   startElevation: number
   landingElevation: number
   straightDistance: number
+  /** Length of the straight lines through the waypoints: no route is shorter (m). */
+  pathDistance: number
   straightLine: StraightLine
   /** Corridor half-width and the distance from the ends where corridors stop (m). */
   corridor: number
@@ -182,7 +184,7 @@ export class RoutePlanner {
 
   /** Best route on a (possibly blocked) grid at its required glide ratio. */
   private searchRequired(plan: Plan, grid: ElevationGrid, hints: RatioHints): Candidate | null {
-    const found = findRequiredGlideRatio(grid, plan.problem, plan.straightDistance, undefined, hints)
+    const found = findRequiredGlideRatio(grid, plan.problem, plan.pathDistance, undefined, hints)
     if (!found) return null
     const geometry = straightenLegs(grid, found.legs, plan.ctx, found.glideRatio)
     return {
@@ -239,13 +241,14 @@ export class RoutePlanner {
     const { start, landing, waypoints = [], clearance, launchZone, takeoffRun, arrivalHeight } = req
     const { maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
+    const straightDistance = localDistance(start, landing)
+    if (straightDistance < 50) throw new PlanError('The landing is too close to the start.')
     // Through the waypoints when there are some: no route is shorter.
     const points = [start, ...waypoints, landing]
-    let straightDistance = 0
-    for (let i = 1; i < points.length; i++) straightDistance += localDistance(points[i - 1], points[i])
-    if (localDistance(start, landing) < 50) throw new PlanError('The landing is too close to the start.')
-    if (straightDistance > 1.5 * maxRadius) {
-      throw new PlanError(`The route is ${Math.round(straightDistance / 1000)} km long: too far to plan.`)
+    let pathDistance = 0
+    for (let i = 1; i < points.length; i++) pathDistance += localDistance(points[i - 1], points[i])
+    if (pathDistance > 1.5 * maxRadius) {
+      throw new PlanError(`The route is ${Math.round(pathDistance / 1000)} km long: too far to plan.`)
     }
     const [startElevation, landingElevation] = await Promise.all([
       groundElevation(start, this.loadTiles, this.options),
@@ -283,9 +286,10 @@ export class RoutePlanner {
     elevation[startCell] = Math.min(elevation[startCell], startAltitude)
     elevation[target] = Math.min(elevation[target], landingElevation)
 
-    const corridor = Math.min(1500, Math.max(300, 0.1 * straightDistance))
+    const corridor = Math.min(1500, Math.max(300, 0.1 * pathDistance))
     const ctx: RouteContext = { startAltitude, clearance, launchZone, start: startCell, target, targetElevation: landingElevation, arrivalHeight }
-    const straight = glideLimit(straightLine(elevationGrid, ctx, run, waypointCells), ctx)
+    // The direct line, whatever the waypoints.
+    const straight = glideLimit(straightLine(elevationGrid, ctx, run), ctx)
     return {
       key,
       prepared,
@@ -305,6 +309,7 @@ export class RoutePlanner {
       startElevation,
       landingElevation,
       straightDistance,
+      pathDistance,
       straightLine: {
         glideRatio: straight.glideRatio,
         limit: straight.limit && { distance: straight.limit.distance, elevation: straight.limit.elevation },

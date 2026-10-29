@@ -230,24 +230,18 @@ export function straightenLegs(grid: ElevationGrid, legs: number[][], ctx: Route
 }
 
 /**
- * The straight line from the start to the landing, whatever the terrain, through the
- * waypoints (`via`, cells) when there are some. On a ground launch (`takeoffRun` > 0)
- * the pilot runs along it and lifts off where the line then needs the smallest glide
- * ratio, at the ground there and never above the start.
+ * The straight line from the start to the landing, whatever the terrain. On a ground
+ * launch (`takeoffRun` > 0) the pilot runs along it and lifts off where the line then
+ * needs the smallest glide ratio, at the ground there and never above the start.
  */
-export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun: number, via: number[] = []): RouteGeometry {
+export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun: number): RouteGeometry {
   const at = (cell: number): [number, number] => [cell % grid.cols, Math.floor(cell / grid.cols)]
-  const points = [ctx.start, ...via, ctx.target].map(at)
-  const [c0, r0] = points[0]
+  const [c0, r0] = at(ctx.start)
+  const [c1, r1] = at(ctx.target)
   const samples: RouteSample[] = [{ distance: 0, col: c0, row: r0, elevation: grid.elevation[ctx.start], cell: ctx.start }]
-  const waypoints: number[] = []
-  for (let i = 1; i < points.length; i++) {
-    if (i > 1) waypoints.push(samples[samples.length - 1].distance)
-    const [a, b] = [points[i - 1], points[i]]
-    sampleSegment(grid, a[0], a[1], b[0], b[1], samples[samples.length - 1].distance, ctx.launchZone, samples)
-  }
+  sampleSegment(grid, c0, r0, c1, r1, 0, ctx.launchZone, samples)
   const length = samples[samples.length - 1].distance
-  const route = (liftoff: Liftoff): RouteGeometry => ({ vertices: points, samples, length, liftoff, waypoints })
+  const route = (liftoff: Liftoff): RouteGeometry => ({ vertices: [[c0, r0], [c1, r1]], samples, length, liftoff, waypoints: [] })
 
   let best = route({ distance: 0, altitude: ctx.startAltitude, cell: ctx.start })
   let bestRatio = requiredGlideRatioFor(best, ctx)

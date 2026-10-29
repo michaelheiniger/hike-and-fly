@@ -286,8 +286,11 @@ describe.skipIf(!hasArchive)('real scenarios', () => {
       // It flies over the waypoint: a corner of the route is in its cell.
       const near = best.vertices.some((v) => localDistance(v, zweilutschinen) < result.cellSize)
       expect(near).toBe(true)
-      // The straight line through the waypoint is longer than the direct one.
-      expect(result.straightDistance).toBeGreaterThan(s.geodesic)
+      // The straight line stays the direct one, whatever the waypoints (on a grid
+      // widened for the waypoint: its cells fall a little differently).
+      expect(Math.abs(result.straightDistance - s.geodesic)).toBeLessThan(1)
+      expect(result.straightLine.glideRatio / s.straight).toBeCloseTo(1, 2)
+      expect(result.straightLine.glideRatio).toBeGreaterThanOrEqual(0.99 * s.straightDem)
     })
   })
 })

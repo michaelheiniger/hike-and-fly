@@ -101,9 +101,10 @@ route is shown.
 Points to fly over on the way to the landing, in order, each with the clearance (the glide
 goes on from there). Being higher at a waypoint is never worse, so the search chains one leg
 per waypoint: a leg starts at its waypoint with the distance flown so far, and the takeoff
-run belongs to the first leg. The required GR's bisection runs over the whole chain, the
-straight line becomes the polyline through the waypoints (also the lower bound), legs are
-straightened separately, and alternative routes keep their corridors open at the waypoints.
+run belongs to the first leg. The required GR's bisection runs over the whole chain, with
+the polyline through the waypoints as its lower bound; legs are straightened separately, and
+alternative routes keep their corridors open at the waypoints. The straight line (distance,
+ratio, terrain) stays the direct one from the start to the landing, for comparison.
 The grid covers the box of all points. The reach overlay ignores waypoints. In links:
 `wp=lat,lng;lat,lng`.
 

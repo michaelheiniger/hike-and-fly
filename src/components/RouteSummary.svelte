@@ -73,12 +73,12 @@
       <span class="value">{Math.round(result.startAltitude - result.landingElevation)} m</span>
     </div>
     <div class="row">
-      <span class="label">Straight distance{via}</span>
+      <span class="label">Straight distance</span>
       <span class="value">{(result.straightDistance / 1000).toFixed(1)} km</span>
     </div>
     {#if straightRatio !== null}
       <div class="row">
-        <span class="label">Straight line{via}</span>
+        <span class="label">Straight line</span>
         <span class="value">needs {up(straightRatio)}</span>
       </div>
       <span class="muted">Distance over height, with {arrivalHeight} m above the landing. {terrainNote}</span>
@@ -90,7 +90,7 @@
         <span class="number">{up(best.requiredGlideRatio)}</span>
         <span class="muted">
           {#if waypointCount}
-            Through {waypointCount === 1 ? 'the waypoint' : `the ${waypointCount} waypoints`}, in order; the straight line{via}
+            Through {waypointCount === 1 ? 'the waypoint' : `the ${waypointCount} waypoints`}, in order; the straight line
             {result.straightLine.glideRatio === Infinity
               ? 'is blocked by terrain'
               : `would need ${up(result.straightLine.glideRatio)}`}.
