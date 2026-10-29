@@ -3,6 +3,8 @@
  * swissALTI3D archive, against independent references:
  * - start and landing ground from the swisstopo height service,
  * - straight distance as the WGS84 geodesic (Vincenty),
+ * - `straightDem`: the same for the straight line, lifting off at the best point
+ *   within the takeoff run along it,
  * - `demGlideRatio`: the best route's required glide ratio recomputed on the
  *   swisstopo 2 m profile service along the route's vertices, from its liftoff
  *   (at the service's height there) after the takeoff run.
@@ -32,6 +34,9 @@ interface Scenario {
   demGlideRatio: number
   /** Side, required glide ratio and length (m) of each route, best first. */
   routes: [string | null, number, number][]
+  /** Required glide ratio of the straight line over the terrain (Infinity: blocked), and on the 2 m terrain. */
+  straight: number
+  straightDem: number
   /** AGL over the landing in the reach overlay, null where unreachable. */
   reachAgl: number | null
 }
@@ -46,6 +51,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 6516.3,
     demGlideRatio: 4.733,
     routes: [[null, 4.728, 6546], ['East', 5.1, 7032], ['West', 5.981, 7020]],
+    straight: 4.733,
+    straightDem: 4.725,
     reachAgl: 158.6,
   },
   {
@@ -57,6 +64,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 4850.3,
     demGlideRatio: 3.959,
     routes: [['South-west', 4.042, 4926], ['South-west', 5.446, 5494], ['North-east', 7.55, 5057]],
+    straight: 4.776,
+    straightDem: 4.515,
     reachAgl: 393.7,
   },
   {
@@ -68,6 +77,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 4589.3,
     demGlideRatio: 4.285,
     routes: [[null, 4.286, 4598], ['South-east', 4.6, 4913], ['South-east', 5.507, 5901]],
+    straight: 4.294,
+    straightDem: 4.296,
     reachAgl: 246.3,
   },
   {
@@ -80,6 +91,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 15404.6,
     demGlideRatio: 12.744,
     routes: [['South', 12.899, 18491]],
+    straight: Infinity,
+    straightDem: Infinity,
     reachAgl: null,
   },
   {
@@ -94,6 +107,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 15404.6,
     demGlideRatio: 6.478,
     routes: [['North', 6.599, 16035], ['North', 7.096, 17974], ['South', 7.18, 17791]],
+    straight: 9.467,
+    straightDem: 9.258,
     reachAgl: 651.2,
   },
   {
@@ -105,6 +120,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 2828.8,
     demGlideRatio: 4.07,
     routes: [['West', 4.133, 3124], ['West', 4.748, 3635], ['West', 9.35, 4560]],
+    straight: 7.8,
+    straightDem: 7.193,
     reachAgl: 264.8,
   },
   {
@@ -116,6 +133,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 3287.4,
     demGlideRatio: 5.016,
     routes: [[null, 5.012, 3311], ['South-west', 5.41, 3573], ['South-west', 7.05, 4306]],
+    straight: 6.45,
+    straightDem: 5.718,
     reachAgl: 91.3,
   },
   {
@@ -127,6 +146,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 7619,
     demGlideRatio: 4.606,
     routes: [[null, 4.642, 7621], ['South-west', 4.964, 8213], ['South-west', 6.611, 9859]],
+    straight: 5.093,
+    straightDem: 5.015,
     reachAgl: 218.8,
   },
   {
@@ -138,6 +159,8 @@ const SCENARIOS: Scenario[] = [
     geodesic: 3879.2,
     demGlideRatio: 2.483,
     routes: [[null, 2.485, 3887], ['East', 2.703, 4224], ['West', 2.704, 4166]],
+    straight: 2.491,
+    straightDem: 2.493,
     reachAgl: 859.6,
   },
 ]
@@ -175,6 +198,15 @@ describe.skipIf(!hasArchive)('real scenarios', () => {
       expect(result.landingElevation).toBe(s.landingElevation)
       expect(result.startAltitude).toBe(startAltitude)
       expect(Math.abs(result.straightDistance - s.geodesic)).toBeLessThan(1)
+
+      // The straight line, also when terrain blocks it: never easier than the 2 m terrain.
+      if (s.straight === Infinity) {
+        expect(result.straightLine.glideRatio).toBe(Infinity)
+        expect(s.straightDem).toBe(Infinity)
+      } else {
+        expect(result.straightLine.glideRatio).toBeCloseTo(s.straight, 2)
+        expect(result.straightLine.glideRatio).toBeGreaterThanOrEqual(0.99 * s.straightDem)
+      }
 
       const [best] = result.options
       // Conservative against the 2 m terrain (the grid keeps the highest point per

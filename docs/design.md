@@ -63,6 +63,10 @@ Implementation notes:
 - Two routes exist: the one at the required GR (it may detour around a ridge) and the one
   flown with the pilot's GR (which may cross it). The map and profile show the pilot's route
   when it reaches the landing, otherwise the required one, dashed.
+- The straight line is always shown with its ratio (distance over height), and what the
+  terrain does to it with the per-route closed form: clear, raised to a higher ratio by
+  the ground at a named point, or blocked (ground above the glide at any ratio). On a
+  ground launch it lifts off at the best point of the takeoff run along the line.
 - The arrival can exceed the arrival height at the required GR: the limiting point may be a
   ridge en route (the glide path touches the clearance line in the profile).
 

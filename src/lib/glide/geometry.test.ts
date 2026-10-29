@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { altitudeAt, corridorMask, requiredGlideRatioFor, shareInside, straightenRoute, type RouteContext } from './geometry'
+import {
+  altitudeAt,
+  corridorMask,
+  glideLimit,
+  requiredGlideRatioFor,
+  shareInside,
+  straightenRoute,
+  straightLine,
+  type RouteContext,
+} from './geometry'
 import { searchGlide, traceRoute, type ElevationGrid } from './search'
 
 const CELL = 10
@@ -126,6 +135,48 @@ describe('requiredGlideRatioFor', () => {
     // The landing alone needs 1000 / 600 = 1.7; over the ridge cell the glider must
     // stay above 500 m: its last sample at 400 m needs 400 / 100 = 4.
     expect(requiredGlideRatioFor(geometry, ctx)).toBeCloseTo(4, 6)
+  })
+})
+
+describe('straightLine', () => {
+  // Start at 600 m over flat ground, landing 1000 m east at 0 m.
+  const ctx = (grid: ElevationGrid): RouteContext => ({
+    startAltitude: 600,
+    clearance: 0,
+    launchZone: 0,
+    start: 0,
+    target: grid.cols - 1,
+    targetElevation: 0,
+    arrivalHeight: 100,
+  })
+  const limitOf = (grid: ElevationGrid, run = 0) => glideLimit(straightLine(grid, ctx(grid), run), ctx(grid))
+
+  it('is set by the arrival height over clear ground', () => {
+    const grid = makeGrid(101, 1, () => 0)
+    expect(limitOf(grid)).toEqual({ glideRatio: 2, limit: null })
+  })
+
+  it('is raised by a ridge below the start', () => {
+    // 500 m ridge 400 m out: 400 / 100 = 4.
+    const grid = makeGrid(101, 1, (c) => (c === 40 ? 500 : 0))
+    const { glideRatio, limit } = limitOf(grid)
+    expect(glideRatio).toBeCloseTo(4, 6)
+    expect(limit?.elevation).toBe(500)
+  })
+
+  it('is blocked by a ridge above the start, which it names', () => {
+    const grid = makeGrid(101, 1, (c) => (c === 40 ? 700 : 0))
+    const { glideRatio, limit } = limitOf(grid)
+    expect(glideRatio).toBe(Infinity)
+    expect(limit?.distance).toBeCloseTo(395, 6) // the first sample over the ridge cell
+  })
+
+  it('lifts off along the line after the takeoff run', () => {
+    // Flat for 20 m at the start altitude, then down at 1:1 from 590 m at 30 m.
+    const grid = makeGrid(101, 1, (c) => (c < 3 ? 600 : Math.max(0, 590 - (c - 3) * CELL)))
+    expect(limitOf(grid).glideRatio).toBe(Infinity)
+    // From the edge of the flat, 20 m out at 600 m: 980 m to the landing with 500 m to lose.
+    expect(limitOf(grid, 30).glideRatio).toBeCloseTo(980 / 500, 6)
   })
 })
 

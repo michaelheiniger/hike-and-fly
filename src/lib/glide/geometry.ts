@@ -180,18 +180,59 @@ function straightenGlide(grid: ElevationGrid, cells: number[], ctx: RouteContext
  * terrain plus clearance, and the arrival height over the landing. Infinity if impossible.
  */
 export function requiredGlideRatioFor(route: RouteGeometry, ctx: RouteContext): number {
+  return glideLimit(route, ctx).glideRatio
+}
+
+/**
+ * The required glide ratio of a route and what sets it: a sample (the first too high to
+ * clear at any ratio, when Infinity), or null for the arrival height over the landing.
+ */
+export function glideLimit(route: RouteGeometry, ctx: RouteContext): { glideRatio: number; limit: RouteSample | null } {
   const { liftoff } = route
   let required = 0
+  let limit: RouteSample | null = null
   for (const s of route.samples) {
     if (s.distance <= liftoff.distance || s.cell === liftoff.cell || s.cell === ctx.start || s.cell === ctx.target) continue
     const flown = s.distance - liftoff.distance
     const height = liftoff.altitude - s.elevation - clearanceAt(ctx, flown)
-    if (height <= 0) return Infinity
-    required = Math.max(required, flown / height)
+    if (height <= 0) return { glideRatio: Infinity, limit: s }
+    if (flown / height > required) {
+      required = flown / height
+      limit = s
+    }
   }
   const height = liftoff.altitude - ctx.targetElevation - ctx.arrivalHeight
-  if (height <= 0) return Infinity
-  return Math.max(required, (route.length - liftoff.distance) / height)
+  if (height <= 0) return { glideRatio: Infinity, limit: null }
+  const arrival = (route.length - liftoff.distance) / height
+  return arrival >= required ? { glideRatio: arrival, limit: null } : { glideRatio: required, limit }
+}
+
+/**
+ * The straight line from the start to the landing, whatever the terrain. On a ground
+ * launch (`takeoffRun` > 0) the pilot runs along it and lifts off where the line then
+ * needs the smallest glide ratio, at the ground there and never above the start.
+ */
+export function straightLine(grid: ElevationGrid, ctx: RouteContext, takeoffRun: number): RouteGeometry {
+  const at = (cell: number): [number, number] => [cell % grid.cols, Math.floor(cell / grid.cols)]
+  const [c0, r0] = at(ctx.start)
+  const [c1, r1] = at(ctx.target)
+  const samples: RouteSample[] = [{ distance: 0, col: c0, row: r0, elevation: grid.elevation[ctx.start], cell: ctx.start }]
+  sampleSegment(grid, c0, r0, c1, r1, 0, ctx.launchZone, samples)
+  const length = samples[samples.length - 1].distance
+  const route = (liftoff: Liftoff): RouteGeometry => ({ vertices: [[c0, r0], [c1, r1]], samples, length, liftoff })
+
+  let best = route({ distance: 0, altitude: ctx.startAltitude, cell: ctx.start })
+  let bestRatio = requiredGlideRatioFor(best, ctx)
+  for (const s of samples) {
+    if (s.distance === 0 || s.distance > takeoffRun || s.elevation > ctx.startAltitude) continue
+    const candidate = route({ distance: s.distance, altitude: s.elevation, cell: s.cell })
+    const ratio = requiredGlideRatioFor(candidate, ctx)
+    if (ratio < bestRatio) {
+      best = candidate
+      bestRatio = ratio
+    }
+  }
+  return best
 }
 
 /**

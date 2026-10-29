@@ -21,7 +21,7 @@
   /** Rounded up: the conservative side. */
   const up = (gr: number) => (Math.ceil(gr * 10 - 1e-9) / 10).toFixed(1)
 
-  /** Glide ratio for the straight line, ignoring terrain. */
+  /** Glide ratio for the straight line, ignoring terrain: distance over height. */
   const straightRatio = $derived.by(() => {
     if (!result) return null
     const height = result.startAltitude - result.landingElevation - arrivalHeight
@@ -29,6 +29,19 @@
   })
 
   const best = $derived(result?.options[0] ?? null)
+
+  /** Distance along the straight line, in m close to the start. */
+  const along = (d: number) => (d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1)} km`)
+
+  /** What the terrain does to the straight line: blocks it, raises its ratio, or nothing. */
+  const terrainNote = $derived.by(() => {
+    if (!result || straightRatio === null) return null
+    const { glideRatio, limit } = result.straightLine
+    const where = limit ? `${along(limit.distance)} out (${Math.round(limit.elevation)} m)` : ''
+    if (glideRatio === Infinity) return `Blocked by terrain ${where}.`
+    if (limit && Number(up(glideRatio)) > Number(up(straightRatio))) return `The terrain raises it to ${up(glideRatio)}: ground ${where}.`
+    return 'Clear of the terrain.'
+  })
 
   /** Height above the landing when flying a route with the pilot's glide ratio. */
   const arrival = (o: RouteOption) =>
@@ -59,6 +72,13 @@
       <span class="label">Straight distance</span>
       <span class="value">{(result.straightDistance / 1000).toFixed(1)} km</span>
     </div>
+    {#if straightRatio !== null}
+      <div class="row">
+        <span class="label">Straight line</span>
+        <span class="value">needs {up(straightRatio)}</span>
+      </div>
+      <span class="muted">Distance over height, with {arrivalHeight} m above the landing. {terrainNote}</span>
+    {/if}
 
     <div class="hero" aria-live="polite">
       <span class="label">Required glide ratio</span>
@@ -68,8 +88,10 @@
           {#if !best.side}
             Along the straight line.
           {:else}
-            Around terrain on the {best.side.toLowerCase()} side; the straight line would need
-            {straightRatio ? up(straightRatio) : '—'}.
+            Around terrain on the {best.side.toLowerCase()} side; the straight line
+            {result.straightLine.glideRatio === Infinity
+              ? 'is blocked by terrain'
+              : `would need ${up(result.straightLine.glideRatio)}`}.
           {/if}
           Includes {arrivalHeight} m above the landing.
         </span>

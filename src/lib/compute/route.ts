@@ -1,4 +1,13 @@
-import { corridorMask, requiredGlideRatioFor, shareInside, straightenRoute, type RouteContext, type RouteGeometry } from '../glide/geometry'
+import {
+  corridorMask,
+  glideLimit,
+  requiredGlideRatioFor,
+  shareInside,
+  straightenRoute,
+  straightLine,
+  type RouteContext,
+  type RouteGeometry,
+} from '../glide/geometry'
 import { arriveWith, findRequiredGlideRatio, type ArrivalProblem } from '../glide/required'
 import { traceRoute, type ElevationGrid } from '../glide/search'
 import { cellAt, localDistance, metersPerDegree, type GeoGrid, type LngLat } from '../terrain/geo'
@@ -51,11 +60,20 @@ export interface RouteOption {
   liftoff: { distance: number; altitude: number }
 }
 
+/** The straight line to the landing over the terrain, whether or not it can be flown. */
+export interface StraightLine {
+  /** Required glide ratio with the terrain, clearance and arrival height; Infinity when terrain blocks it. */
+  glideRatio: number
+  /** Terrain that sets it (the first blocking point, when blocked), null when the arrival height does. */
+  limit: { distance: number; elevation: number } | null
+}
+
 export interface RouteResult {
   startElevation: number
   startAltitude: number
   landingElevation: number
   straightDistance: number
+  straightLine: StraightLine
   /** Distinct routes, smallest required glide ratio first. Empty if none up to MAX_GLIDE_RATIO. */
   options: RouteOption[]
   /** True until the search for alternative routes has run. */
@@ -86,6 +104,7 @@ interface Plan {
   startElevation: number
   landingElevation: number
   straightDistance: number
+  straightLine: StraightLine
   /** Corridor half-width and the distance from the ends where corridors stop (m). */
   corridor: number
   keepClear: number
@@ -191,6 +210,7 @@ export class RoutePlanner {
       startAltitude: plan.problem.startAltitude,
       landingElevation: plan.landingElevation,
       straightDistance: plan.straightDistance,
+      straightLine: plan.straightLine,
       options,
       alternativesPending: !plan.alternativesDone,
       cellSize: plan.prepared.cellSize,
@@ -212,6 +232,7 @@ export class RoutePlanner {
       groundElevation(landing, this.loadTiles, this.options),
     ])
     const startAltitude = startAltitudeFrom(req.startHeight, req.startHeightMode, startElevation)
+    const run = groundLaunch(startAltitude, startElevation) ? takeoffRun : 0
 
     // Centered between start and landing, with room for detours on all sides.
     const center = { lng: (start.lng + landing.lng) / 2, lat: (start.lat + landing.lat) / 2 }
@@ -231,6 +252,8 @@ export class RoutePlanner {
     elevation[target] = Math.min(elevation[target], landingElevation)
 
     const corridor = Math.min(1500, Math.max(300, 0.1 * straightDistance))
+    const ctx: RouteContext = { startAltitude, clearance, launchZone, start: startCell, target, targetElevation: landingElevation, arrivalHeight }
+    const straight = glideLimit(straightLine(elevationGrid, ctx, run), ctx)
     return {
       key,
       prepared,
@@ -240,15 +263,19 @@ export class RoutePlanner {
         startAltitude,
         clearance,
         launchZone,
-        takeoffRun: groundLaunch(startAltitude, startElevation) ? takeoffRun : 0,
+        takeoffRun: run,
         target,
         targetElevation: landingElevation,
         arrivalHeight,
       },
-      ctx: { startAltitude, clearance, launchZone, start: startCell, target, targetElevation: landingElevation, arrivalHeight },
+      ctx,
       startElevation,
       landingElevation,
       straightDistance,
+      straightLine: {
+        glideRatio: straight.glideRatio,
+        limit: straight.limit && { distance: straight.limit.distance, elevation: straight.limit.elevation },
+      },
       corridor,
       keepClear: 1.5 * corridor,
       found: [],
