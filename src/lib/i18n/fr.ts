@@ -221,6 +221,11 @@ export const fr: Messages = {
     offlineAreasTitle: 'Contour des zones téléchargées pour l’usage hors ligne',
     waypointTitle: (n) => `Balise ${n} : glisser pour déplacer`,
     route: (letter) => `Itinéraire ${letter}`,
+    zoomIn: 'Zoom avant',
+    zoomOut: 'Zoom arrière',
+    attribution: 'Afficher ou masquer les sources',
+    title: 'Carte',
+    marker: 'Marqueur',
   },
 
   legend: {

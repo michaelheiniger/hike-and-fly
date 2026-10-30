@@ -92,6 +92,31 @@
   let landingMarker: Marker | undefined
   let waypointMarkers: Marker[] = []
 
+  /** MapLibre's control texts, which it reads once, when the map is created. */
+  const mapLocale = () => ({
+    'NavigationControl.ZoomIn': t.map.zoomIn,
+    'NavigationControl.ZoomOut': t.map.zoomOut,
+    'AttributionControl.ToggleAttribution': t.map.attribution,
+    'Map.Title': t.map.title,
+    'Marker.Title': t.map.marker,
+  })
+
+  // After a change of language, relabel the controls MapLibre made.
+  $effect(() => {
+    if (!map) return
+    const labels: [string, string][] = [
+      ['.maplibregl-ctrl-zoom-in', t.map.zoomIn],
+      ['.maplibregl-ctrl-zoom-out', t.map.zoomOut],
+      ['.maplibregl-ctrl-attrib-button', t.map.attribution],
+    ]
+    for (const [selector, label] of labels) {
+      const el = container.querySelector(selector)
+      el?.setAttribute('title', label)
+      el?.setAttribute('aria-label', label)
+    }
+    map.getCanvas().setAttribute('aria-label', t.map.title)
+  })
+
   /** Throws when the browser cannot create a WebGL context. */
   function createMap(): Map {
     return new Map({
@@ -101,6 +126,7 @@
       zoom: start ? 11 : 7.5,
       maxZoom: 18,
       attributionControl: { compact: true, customAttribution: [SWISS_ARCHIVE.attribution, AWS_TERRARIUM.attribution] },
+      locale: mapLocale(),
     })
   }
 

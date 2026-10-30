@@ -222,6 +222,11 @@ export const de: Messages = {
     offlineAreasTitle: 'Umrisse der für die Offline-Nutzung heruntergeladenen Gebiete',
     waypointTitle: (n) => `Wegpunkt ${n}: zum Verschieben ziehen`,
     route: (letter) => `Route ${letter}`,
+    zoomIn: 'Hineinzoomen',
+    zoomOut: 'Herauszoomen',
+    attribution: 'Quellenangaben ein- oder ausblenden',
+    title: 'Karte',
+    marker: 'Kartenmarkierung',
   },
 
   legend: {

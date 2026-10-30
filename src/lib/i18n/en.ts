@@ -230,6 +230,12 @@ export const en = {
     offlineAreasTitle: 'Outline the areas downloaded for offline use',
     waypointTitle: (n: number) => `Waypoint ${n}: drag to move`,
     route: (letter: string) => `Route ${letter}`,
+    /** MapLibre's own controls. */
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    attribution: 'Toggle attribution',
+    title: 'Map',
+    marker: 'Map marker',
   },
 
   legend: {
