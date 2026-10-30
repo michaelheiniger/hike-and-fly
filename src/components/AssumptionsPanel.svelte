@@ -14,7 +14,7 @@
     basemap: BasemapId
     /** Rendered after the glide inputs (the landing and its routes). */
     landing?: Snippet
-    /** Rendered in the settings dialog after the map settings (offline areas). */
+    /** Rendered in the settings dialog between the assumptions and the map settings (offline areas). */
     footer?: Snippet
   }
 
@@ -252,6 +252,13 @@
   </div>
 
   <section>
+    <h2>Assumptions</h2>
+    {@render assumptionFields()}
+  </section>
+
+  {@render footer?.()}
+
+  <section>
     <h2>Map</h2>
     <label class="field">
       <span class="label">Map</span>
@@ -281,13 +288,6 @@
         <option value="colorblind">Color-blind friendly</option>
       </select>
     </label>
-  </section>
-
-  {@render footer?.()}
-
-  <section>
-    <h2>Assumptions</h2>
-    {@render assumptionFields()}
   </section>
 </dialog>
 
