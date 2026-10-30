@@ -306,11 +306,13 @@
           <rect class="zone launch" x={x(runEnd)} y={margin.top} width={x(zoneEnd) - x(runEnd)} height={plotH}>
             <title>Launch zone: the clearance grows from 0 to {clearance} m over {launchZone} m after the liftoff</title>
           </rect>
-          <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
         {/if}
         <path class="terrain-area" d={terrainArea} />
         <path class="terrain" d={terrainLine} />
-        <!-- Band labels at the bottom, over the terrain: the glide path starts at the top. -->
+        <!-- End of the launch zone and the band labels over the terrain; labels at the bottom, as the glide path starts at the top. -->
+        {#if zoneEnd > runEnd}
+          <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
+        {/if}
         {#if runLabel !== null}
           <text class="zone-label" x={runLabel} y={margin.top + plotH - (runLabelRaised ? 19 : 5)}>Run</text>
         {/if}

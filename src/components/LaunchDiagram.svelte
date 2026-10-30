@@ -62,11 +62,14 @@
     {/if}
     {#if launchZone > 0}
       <rect class="zone launch" x={x(takeoffRun)} y={margin.top} width={x(zoneEnd) - x(takeoffRun)} height={plotH} />
-      <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
     {/if}
 
     <path class="ground-area" d={groundArea} />
     <path class="ground" d={line(ground)} />
+    {#if launchZone > 0}
+      <!-- Over the ground, all the way down. -->
+      <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
+    {/if}
     <path class="clearance" d={line(floor)} />
     <path class="glide" d={line(glide)} />
 
