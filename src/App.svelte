@@ -11,6 +11,7 @@
   import { listAreas, type Bounds, type OfflineArea } from './lib/offline/areas'
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
+  import { groundLaunch } from './lib/compute/terrain'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import { aglBands, renderAgl } from './lib/render/agl'
   import ReportDialog from './components/ReportDialog.svelte'
@@ -107,6 +108,13 @@
       routeError = null
     }
   })
+
+  /** Where a ground launch may run before lifting off, drawn around the start. */
+  const takeoffRun = $derived(
+    reach && reachRequest && reachRequest.takeoffRun > 0 && groundLaunch(reach.startAltitude, reach.startElevation)
+      ? { center: reachRequest.start, radius: reachRequest.takeoffRun }
+      : null,
+  )
 
   const bands = $derived(aglBands(reachRequest?.clearance ?? settings.clearance, preferences.colorScheme))
 
@@ -305,6 +313,7 @@
     basemap={preferences.basemap}
     showSlope={preferences.showSlope}
     ontoggleslope={() => (preferences.showSlope = !preferences.showSlope)}
+    {takeoffRun}
     offlineAreas={preferences.showOfflineAreas ? offlineAreas : []}
     hasOfflineAreas={offlineAreas.length > 0}
     showOfflineAreas={preferences.showOfflineAreas}

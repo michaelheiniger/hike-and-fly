@@ -62,10 +62,13 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
+/** Edge of the launch zone: dark, slightly see-through. */
+const LAUNCH_ZONE_EDGE: [number, number, number, number] = [26, 26, 25, 210]
+
 /**
  * RGBA image of the AGL bands. Unreachable cells are transparent, and so is the
  * launch zone (cells reached within `launchZone` meters of flight), where the
- * glider is still leaving the slope. The grid has rows of constant latitude step,
+ * glider is still leaving the slope; its cells next to the colored area mark its edge. The grid has rows of constant latitude step,
  * while a map image overlay is stretched linearly in Web Mercator: output rows
  * are resampled at Mercator-linear latitudes to line up.
  */
@@ -82,6 +85,11 @@ export function renderAgl(
   const colors = bands.map((b) => hexToRgb(b.color))
   const yNorth = mercatorY(grid.north)
   const ySouth = mercatorY(grid.north - grid.rows * grid.dLat)
+  const beyond = (r: number, c: number) => {
+    if (r < 0 || c < 0 || r >= grid.rows || c >= grid.cols) return false
+    const i = r * grid.cols + c
+    return !Number.isNaN(agl[i]) && distance[i] >= launchZone
+  }
 
   for (let j = 0; j < height; j++) {
     const lat = latFromMercatorY(yNorth + ((j + 0.5) / height) * (ySouth - yNorth))
@@ -89,11 +97,17 @@ export function renderAgl(
     for (let c = 0; c < width; c++) {
       const i = row * grid.cols + c
       const v = agl[i]
-      if (Number.isNaN(v) || distance[i] < launchZone) continue
+      if (Number.isNaN(v)) continue
+      const p = (j * width + c) * 4
+      if (distance[i] < launchZone) {
+        if (beyond(row - 1, c) || beyond(row + 1, c) || beyond(row, c - 1) || beyond(row, c + 1)) {
+          rgba.set(LAUNCH_ZONE_EDGE, p)
+        }
+        continue
+      }
       let b = bands.length - 1
       while (b > 0 && v < bands[b].from) b--
       const [r, g, bl] = colors[b]
-      const p = (j * width + c) * 4
       rgba[p] = r
       rgba[p + 1] = g
       rgba[p + 2] = bl

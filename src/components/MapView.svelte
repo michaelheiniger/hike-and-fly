@@ -36,6 +36,8 @@
     overlay: Overlay | null
     basemap: BasemapId
     showSlope: boolean
+    /** Circle around the start within which a ground launch may run before lifting off. */
+    takeoffRun: { center: LngLat; radius: number } | null
     /** Downloaded areas to outline (dashed when they have gaps). */
     offlineAreas: OfflineArea[]
     /** Whether the toggle for the outlines is shown, and its state. */
@@ -64,6 +66,7 @@
     basemap,
     showSlope,
     ontoggleslope,
+    takeoffRun,
     offlineAreas,
     hasOfflineAreas,
     showOfflineAreas,
@@ -119,6 +122,7 @@
       m.addSource('route', { type: 'geojson', data: empty })
       m.addSource('highlight', { type: 'geojson', data: empty })
       m.addSource('offline-areas', { type: 'geojson', data: empty })
+      m.addSource('takeoff-run', { type: 'geojson', data: empty })
       // Downloaded areas: a light tint under the AGL overlay (inserted below the slopes)…
       m.addLayer(
         { id: 'offline-areas-fill', type: 'fill', source: 'offline-areas', paint: { 'fill-color': '#1f4e9c', 'fill-opacity': 0.06 } },
@@ -188,6 +192,20 @@
           source: 'offline-areas',
           filter: ['!=', ['get', 'complete'], true],
           paint: { 'line-color': '#1f4e9c', 'line-width': 2, 'line-dasharray': [2, 1.5] },
+        },
+        'route-other',
+      )
+      // Takeoff run: a whitened circle around the start, under the routes.
+      m.addLayer(
+        { id: 'takeoff-run-fill', type: 'fill', source: 'takeoff-run', paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.35 } },
+        'route-other',
+      )
+      m.addLayer(
+        {
+          id: 'takeoff-run',
+          type: 'line',
+          source: 'takeoff-run',
+          paint: { 'line-color': '#1a1a19', 'line-width': 2, 'line-dasharray': [2, 1] },
         },
         'route-other',
       )
@@ -318,6 +336,23 @@
       ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: [highlight.lng, highlight.lat] } }]
       : []
     ;(map.getSource('highlight') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
+  })
+
+  $effect(() => {
+    if (!map || !loaded) return
+    const features = []
+    if (takeoffRun) {
+      // A circle of `radius` meters, flat-earth: fine at this size.
+      const { center, radius } = takeoffRun
+      const dLat = radius / 111_320
+      const dLng = dLat / Math.cos((center.lat * Math.PI) / 180)
+      const ring = Array.from({ length: 49 }, (_, i) => {
+        const a = (i / 48) * 2 * Math.PI
+        return [center.lng + dLng * Math.cos(a), center.lat + dLat * Math.sin(a)]
+      })
+      features.push({ type: 'Feature' as const, properties: {}, geometry: { type: 'Polygon' as const, coordinates: [ring] } })
+    }
+    ;(map.getSource('takeoff-run') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
   })
 
   $effect(() => {
