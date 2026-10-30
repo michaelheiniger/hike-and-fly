@@ -276,6 +276,16 @@ export const en = {
     sent: 'Thank you: the report was sent.',
     failed: 'The report could not be sent. Check the connection and try again.',
   },
+
+  /** Problems the computations report, by code (see PlanProblem). */
+  errors: {
+    belowGround: (altitude: number, ground: number) => `Start altitude ${altitude} m is below the ground (${ground} m).`,
+    landingTooClose: 'The landing is too close to the start.',
+    routeTooLong: (km: number) => `The route is ${km} km long: too far to plan.`,
+    waypointTooFar: 'A waypoint is too far from the start and landing to plan.',
+    elevationUnavailable: (tile: string) => `Elevation tile ${tile} could not be loaded.`,
+    noOfflineElevation: 'No elevation data offline for this area: download a larger area while online.',
+  },
 }
 
 export type Messages = typeof en

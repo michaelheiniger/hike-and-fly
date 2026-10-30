@@ -17,12 +17,12 @@ import {
   groundElevation,
   groundLaunch,
   loadElevationGrid,
-  PlanError,
   startAltitudeFrom,
   type GridOptions,
   type LoadTiles,
   type PreparedGrid,
 } from './terrain'
+import { PlanError } from './errors'
 
 export interface RouteRequest extends ReachRequest {
   landing: LngLat
@@ -242,13 +242,13 @@ export class RoutePlanner {
     const { maxRadius = DEFAULT_MAX_RADIUS } = this.options
 
     const straightDistance = localDistance(start, landing)
-    if (straightDistance < 50) throw new PlanError('The landing is too close to the start.')
+    if (straightDistance < 50) throw new PlanError({ code: 'landingTooClose' })
     // Through the waypoints when there are some: no route is shorter.
     const points = [start, ...waypoints, landing]
     let pathDistance = 0
     for (let i = 1; i < points.length; i++) pathDistance += localDistance(points[i - 1], points[i])
     if (pathDistance > 1.5 * maxRadius) {
-      throw new PlanError(`The route is ${Math.round(pathDistance / 1000)} km long: too far to plan.`)
+      throw new PlanError({ code: 'routeTooLong', km: Math.round(pathDistance / 1000) })
     }
     const [startElevation, landingElevation] = await Promise.all([
       groundElevation(start, this.loadTiles, this.options),
@@ -278,7 +278,7 @@ export class RoutePlanner {
     const target = l.row * grid.cols + l.col
     const waypointCells = waypoints.map((p) => {
       const c = cellAt(grid, p)
-      if (!c) throw new PlanError('A waypoint is too far from the start and landing to plan.')
+      if (!c) throw new PlanError({ code: 'waypointTooFar' })
       return c.row * grid.cols + c.col
     })
     // Start and landing cells hold their true elevation (the grid keeps the max).

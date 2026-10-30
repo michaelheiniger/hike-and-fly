@@ -1,9 +1,10 @@
 import type { WorkerRequest, WorkerResponse } from './protocol'
 import type { ReachRequest, ReachResult } from './reach'
 import type { RouteRequest, RouteResult } from './route'
+import type { Failure } from './errors'
 
-export type ReachOutcome = { result: ReachResult; elevationSource: string } | { error: string }
-export type RouteOutcome = { result: RouteResult } | { error: string }
+export type ReachOutcome = { result: ReachResult; elevationSource: string } | { error: Failure }
+export type RouteOutcome = { result: RouteResult } | { error: Failure }
 
 type Kind = WorkerRequest['kind']
 /** Kinds of computation queued or running, and whether elevation data is loading. */
@@ -76,7 +77,10 @@ export class PlannerClient {
     this.current = null
     this.sendNext()
     if (done.kind === 'reach' && message.kind === 'reach') {
-      this.callbacks.onReach(message.type === 'result' ? { result: message.result, elevationSource: message.elevationSource } : { error: message.message },
+      this.callbacks.onReach(
+        message.type === 'result'
+          ? { result: message.result, elevationSource: message.elevationSource }
+          : { error: { message: message.message, problem: message.problem } },
         done.request,
       )
     } else if (done.kind !== 'reach' && message.kind !== 'reach') {
@@ -89,7 +93,7 @@ export class PlannerClient {
         }
         if (!(done.kind === 'alternatives' && superseded)) this.callbacks.onRoute({ result: message.result }, done.request)
       } else {
-        this.callbacks.onRoute({ error: message.message }, done.request)
+        this.callbacks.onRoute({ error: { message: message.message, problem: message.problem } }, done.request)
       }
     }
     this.notifyBusy()

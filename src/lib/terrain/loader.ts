@@ -1,4 +1,5 @@
 import { PMTiles } from 'pmtiles'
+import { PlanError } from '../compute/errors'
 import { offlineElevationTile } from '../offline/store'
 import { TILE_SIZE } from './geo'
 import { decodeTerrarium, tileKey, type TileSet } from './terrarium'
@@ -137,13 +138,9 @@ export class TileLoader {
     try {
       response = await fetch(url)
     } catch {
-      throw new Error(
-        navigator.onLine
-          ? `Elevation tile ${z}/${x}/${y} could not be loaded.`
-          : 'No elevation data offline for this area: download a larger area while online.',
-      )
+      throw new PlanError(navigator.onLine ? { code: 'elevationUnavailable', tile: `${z}/${x}/${y}` } : { code: 'noOfflineElevation' })
     }
-    if (!response.ok) throw new Error(`Elevation tile ${z}/${x}/${y}: HTTP ${response.status}`)
+    if (!response.ok) throw new PlanError({ code: 'elevationUnavailable', tile: `${z}/${x}/${y} (HTTP ${response.status})` })
     return response.blob()
   }
 }

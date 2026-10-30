@@ -5,6 +5,7 @@ import type { WorkerRequest, WorkerResponse } from './protocol'
 import { computeReach } from './reach'
 import { RoutePlanner } from './route'
 import type { GridOptions, LoadTiles } from './terrain'
+import { PlanError } from './errors'
 
 const post = (message: WorkerResponse, transfer: Transferable[] = []) => self.postMessage(message, transfer)
 
@@ -54,6 +55,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       post({ id, kind: 'alternatives', type: 'result', result: await planner.alternatives(message.request) })
     }
   } catch (err) {
-    post({ id, kind, type: 'error', message: err instanceof Error ? err.message : String(err) })
+    const message = err instanceof Error ? err.message : String(err)
+    post({ id, kind, type: 'error', message, problem: err instanceof PlanError ? err.problem : undefined })
   }
 }

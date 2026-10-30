@@ -265,4 +265,13 @@ export const fr: Messages = {
     sent: 'Merci : le signalement a été envoyé.',
     failed: 'Le signalement n’a pas pu être envoyé. Vérifiez la connexion et réessayez.',
   },
+
+  errors: {
+    belowGround: (altitude, ground) => `L’altitude de départ (${altitude} m) est sous le sol (${ground} m).`,
+    landingTooClose: 'L’atterrissage est trop près du décollage.',
+    routeTooLong: (km) => `L’itinéraire fait ${km} km : trop loin pour être planifié.`,
+    waypointTooFar: 'Une balise est trop loin du décollage et de l’atterrissage pour être planifiée.',
+    elevationUnavailable: (tile) => `La tuile d’altitude ${tile} n’a pas pu être chargée.`,
+    noOfflineElevation: 'Pas de données d’altitude hors ligne pour cette zone : téléchargez une zone plus grande en étant en ligne.',
+  },
 }

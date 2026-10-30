@@ -1,4 +1,5 @@
 import type { ElevationGrid } from '../glide/search'
+import { PlanError } from './errors'
 import { cellMetrics, makeGeoGrid, zoomForCellSize, type GeoGrid, type LngLat } from '../terrain/geo'
 import { sampleBilinear, sampleGrid, tilesCovering, type TileSet } from '../terrain/terrarium'
 
@@ -9,8 +10,6 @@ export type LoadTiles = (z: number, coords: [number, number][]) => Promise<TileS
 /** Exact ground elevation at a point from an external service, null when unavailable. */
 export type PointElevation = (p: LngLat) => Promise<number | null>
 
-/** Error with a message meant for the pilot. */
-export class PlanError extends Error {}
 
 export interface GridOptions {
   maxZoom: number
@@ -49,7 +48,7 @@ export async function groundElevation(p: LngLat, loadTiles: LoadTiles, options: 
 export function startAltitudeFrom(height: number, mode: HeightMode, ground: number): number {
   const altitude = mode === 'agl' ? ground + height : height
   if (altitude < ground - 0.5) {
-    throw new PlanError(`Start altitude ${Math.round(altitude)} m is below the ground (${Math.round(ground)} m).`)
+    throw new PlanError({ code: 'belowGround', altitude: Math.round(altitude), ground: Math.round(ground) })
   }
   return altitude
 }

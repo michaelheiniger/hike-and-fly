@@ -267,4 +267,13 @@ export const de: Messages = {
     sent: 'Danke: Die Meldung wurde gesendet.',
     failed: 'Die Meldung konnte nicht gesendet werden. Die Verbindung prüfen und nochmals versuchen.',
   },
+
+  errors: {
+    belowGround: (altitude, ground) => `Die Starthöhe (${altitude} m) liegt unter dem Boden (${ground} m).`,
+    landingTooClose: 'Der Landeplatz liegt zu nahe am Start.',
+    routeTooLong: (km) => `Die Route ist ${km} km lang: zu weit für die Planung.`,
+    waypointTooFar: 'Ein Wegpunkt liegt für die Planung zu weit von Start und Landeplatz entfernt.',
+    elevationUnavailable: (tile) => `Die Höhenkachel ${tile} konnte nicht geladen werden.`,
+    noOfflineElevation: 'Für dieses Gebiet sind offline keine Höhendaten vorhanden: online ein grösseres Gebiet herunterladen.',
+  },
 }

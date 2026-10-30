@@ -13,6 +13,7 @@
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import { flownSinceLiftoff } from './lib/glide/search'
   import { km, t } from './lib/i18n/index.svelte'
+  import { problemText, type Failure } from './lib/compute/errors'
   import { groundLaunch } from './lib/compute/terrain'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import { aglBands, renderAgl } from './lib/render/agl'
@@ -26,12 +27,12 @@
   let overlay = $state<Overlay | null>(null)
   let reach = $state.raw<ReachResult | null>(null)
   let reachRequest = $state.raw<ReachRequest | null>(null)
-  let reachError = $state<string | null>(null)
+  let reachError = $state<Failure | null>(null)
   let elevationSource = $state<string | null>(null)
 
   let route = $state.raw<RouteResult | null>(null)
   let routeRequest = $state.raw<RouteRequest | null>(null)
-  let routeError = $state<string | null>(null)
+  let routeError = $state<Failure | null>(null)
 
   let busy = $state<Busy>({ reach: false, route: false, alternatives: false, loading: false })
   /** Route picked by the pilot; null picks automatically. */
@@ -184,6 +185,9 @@
     highlight = null
   })
 
+  /** A failed computation in the interface language; other errors keep the worker's message. */
+  const failureText = (f: Failure | null) => f && (f.problem ? problemText(t, f.problem) : f.message)
+
   /** What the worker is doing, for the loading indicator; null when idle. */
   const activity = $derived(
     !busy.reach && !busy.route && !busy.alternatives
@@ -267,7 +271,7 @@
         reachCellSize: reach?.cellSize,
         routeCellSize: route?.cellSize,
         elevationSource: elevationSource ?? undefined,
-        errors: [reachError, routeError].filter((e): e is string => !!e),
+        errors: [reachError, routeError].filter((e) => !!e).map((e) => e.message),
       },
       version: __APP_VERSION__,
       userAgent: navigator.userAgent,
@@ -384,7 +388,7 @@
     <Places
       {reach}
       reachComputing={busy.reach}
-      {reachError}
+      reachError={failureText(reachError)}
       {route}
       arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
       onclearlanding={() => {
@@ -412,7 +416,7 @@
             result={route}
             computing={busy.route}
             searchingAlternatives={busy.alternatives}
-            error={routeError}
+            error={failureText(routeError)}
             glideRatio={judgedRatio}
             arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
             waypointCount={routeRequest?.waypoints?.length ?? 0}
