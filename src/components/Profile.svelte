@@ -309,7 +309,10 @@
         {/if}
         <path class="terrain-area" d={terrainArea} />
         <path class="terrain" d={terrainLine} />
-        <!-- End of the launch zone and the band labels over the terrain; labels at the bottom, as the glide path starts at the top. -->
+        <!-- Ends of the run and the launch zone, and the band labels, over the terrain; labels at the bottom, as the glide path starts at the top. -->
+        {#if runEnd > 0}
+          <line class="zone-end" x1={x(runEnd)} x2={x(runEnd)} y1={margin.top} y2={margin.top + plotH} />
+        {/if}
         {#if zoneEnd > runEnd}
           <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
         {/if}

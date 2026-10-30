@@ -66,8 +66,11 @@
 
     <path class="ground-area" d={groundArea} />
     <path class="ground" d={line(ground)} />
+    <!-- Ends of the run and the launch zone, over the ground, all the way down. -->
+    {#if takeoffRun > 0}
+      <line class="zone-end" x1={x(takeoffRun)} x2={x(takeoffRun)} y1={margin.top} y2={margin.top + plotH} />
+    {/if}
     {#if launchZone > 0}
-      <!-- Over the ground, all the way down. -->
       <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
     {/if}
     <path class="clearance" d={line(floor)} />
