@@ -3,7 +3,8 @@
   import type { ReachResult } from '../lib/compute/reach'
   import { clearanceAt } from '../lib/glide/geometry'
   import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
-  import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
+  import { LANGUAGE_NAMES, t } from '../lib/i18n/index.svelte'
+  import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LANGUAGES, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
   import InfoTip from './InfoTip.svelte'
   import LaunchDiagram from './LaunchDiagram.svelte'
@@ -289,6 +290,14 @@
       <select bind:value={preferences.colorScheme}>
         <option value="standard">Red to green</option>
         <option value="colorblind">Color-blind friendly</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="label">{t.language}</span>
+      <select bind:value={preferences.language}>
+        {#each LANGUAGES as language (language)}
+          <option value={language} lang={language}>{LANGUAGE_NAMES[language]}</option>
+        {/each}
       </select>
     </label>
   </section>

@@ -166,9 +166,24 @@ export interface Preferences {
   basemap: BasemapId
   /** Finest map zoom for offline downloads. */
   offlineMapZoom: number
+  /** Language of the interface. */
+  language: Language
 }
 
 const OFFLINE_MAP_ZOOMS = [13, 14, 15, 16]
+
+export type Language = 'en' | 'fr' | 'de'
+export const LANGUAGES: Language[] = ['en', 'fr', 'de']
+
+/** The browser's first supported language, else English. */
+function browserLanguage(): Language {
+  const tags = typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language])
+  for (const tag of tags) {
+    const code = tag?.slice(0, 2).toLowerCase()
+    if (LANGUAGES.includes(code as Language)) return code as Language
+  }
+  return 'en'
+}
 
 const PREFERENCES_KEY = 'hike-and-fly:preferences'
 
@@ -181,9 +196,17 @@ function readPreferences(): Preferences {
       showOfflineAreas: stored.showOfflineAreas !== false,
       basemap: Object.hasOwn(BASEMAPS, stored.basemap) ? stored.basemap : 'swisstopo',
       offlineMapZoom: OFFLINE_MAP_ZOOMS.includes(stored.offlineMapZoom) ? stored.offlineMapZoom : 14,
+      language: LANGUAGES.includes(stored.language) ? stored.language : browserLanguage(),
     }
   } catch {
-    return { colorScheme: 'standard', showSlope: false, showOfflineAreas: true, basemap: 'swisstopo', offlineMapZoom: 14 }
+    return {
+      colorScheme: 'standard',
+      showSlope: false,
+      showOfflineAreas: true,
+      basemap: 'swisstopo',
+      offlineMapZoom: 14,
+      language: browserLanguage(),
+    }
   }
 }
 

@@ -120,6 +120,9 @@
   const bands = $derived(aglBands(reachRequest?.clearance ?? settings.clearance, preferences.colorScheme))
 
   $effect(() => savePreferences($state.snapshot(preferences)))
+  $effect(() => {
+    document.documentElement.lang = preferences.language
+  })
 
   // Paint the AGL overlay; a color change only repaints, it does not recompute.
   $effect(() => {
