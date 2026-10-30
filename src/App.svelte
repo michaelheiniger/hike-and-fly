@@ -11,14 +11,12 @@
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
-  import type { BasemapId } from './lib/map/style'
   import { aglBands, renderAgl } from './lib/render/agl'
   import ReportDialog from './components/ReportDialog.svelte'
   import type { ReportContext } from './lib/report'
-  import { preferences, savePreferences, settings, writeUrl } from './lib/settings.svelte'
+  import { preferences, saveAssumptions, savePreferences, settings, writeUrl } from './lib/settings.svelte'
   import { cellAt, gridBounds, type LngLat } from './lib/terrain/geo'
 
-  let basemap: BasemapId = $state('swisstopo')
   let clickSets: 'start' | 'waypoint' | 'landing' = $state(settings.start && !settings.landing ? 'landing' : 'start')
 
   let overlay = $state<Overlay | null>(null)
@@ -83,6 +81,7 @@
   $effect(() => {
     const s = $state.snapshot(settings)
     writeUrl(s)
+    saveAssumptions(s)
     const { start, landing } = s
     if (!start) return
     const reachReq: ReachRequest = {
@@ -302,7 +301,7 @@
     onselectroute={(id) => (selectedRoute = id)}
     {highlight}
     {overlay}
-    {basemap}
+    basemap={preferences.basemap}
     showSlope={preferences.showSlope}
     ontoggleslope={() => (preferences.showSlope = !preferences.showSlope)}
     offlineAreas={preferences.showOfflineAreas ? offlineAreas : []}
@@ -373,7 +372,7 @@
       {elevationSource}
       computing={busy.reach}
       error={reachError}
-      bind:basemap
+      bind:basemap={preferences.basemap}
     >
       {#snippet landing()}
         {#if settings.waypoints.length}
@@ -415,7 +414,7 @@
             planPanel.closeSettings()
             preferences.showOfflineAreas = true
             fitTo = { ...b }
-            basemap = 'swisstopo'
+            preferences.basemap = 'swisstopo'
           }}
         />
       {/snippet}

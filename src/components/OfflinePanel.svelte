@@ -11,6 +11,7 @@
     type OfflineArea,
   } from '../lib/offline/areas'
   import { AWS_TERRARIUM, SWISS_ARCHIVE, TileLoader } from '../lib/terrain/loader'
+  import { preferences } from '../lib/settings.svelte'
   import InfoTip from './InfoTip.svelte'
 
   interface Props {
@@ -27,14 +28,13 @@
   /** Above this, the download is refused: zoom in or lower the detail. */
   const MAX_TILES = 30_000
 
-  let mapMaxZoom = $state(14)
   let progress = $state<DownloadProgress | null>(null)
   let message = $state<string | null>(null)
   let storage = $state<{ usage: number; quota: number } | null>(null)
   let controller: AbortController | null = null
   let loader: TileLoader | null = null
 
-  const plan = $derived(view ? planArea(view, mapMaxZoom) : null)
+  const plan = $derived(view ? planArea(view, preferences.offlineMapZoom) : null)
   const tileCount = $derived(plan ? plan.mapTiles.length + plan.elevationTiles.length : 0)
 
   const mb = (bytes: number) => (bytes < 10e6 ? (bytes / 1e6).toFixed(1) : Math.round(bytes / 1e6).toString())
@@ -90,7 +90,7 @@
   </div>
   <label class="field">
     <span class="label">Map detail</span>
-    <select bind:value={mapMaxZoom} disabled={!!progress}>
+    <select bind:value={preferences.offlineMapZoom} disabled={!!progress}>
       <option value={13}>Overview (zoom 13)</option>
       <option value={14}>Standard (zoom 14)</option>
       <option value={15}>Detailed (zoom 15)</option>

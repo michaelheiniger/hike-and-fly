@@ -124,7 +124,11 @@ The grid covers the box of all points. The reach overlay ignores waypoints. In l
 The glide ratio and start height are in the side panel; the other assumptions are in the
 **Settings dialog** (opened from the panel's header, together with the map and offline
 settings), each with its default marked and an explanation, and every one of them can be
-changed. All settings are encoded in the URL so plans can be shared.
+changed. All settings are encoded in the URL so plans can be shared. Assumptions that
+differ from their defaults are also kept in the browser and used when the URL has none
+(a link's values win; opening a link stores nothing until an assumption is changed), so
+they last when the installed app opens. Display preferences (map, colors, overlays,
+offline map detail) are kept in the browser too.
 
 | Setting | Default | Rationale |
 |---|---|---|

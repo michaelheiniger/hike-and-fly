@@ -1,4 +1,5 @@
 import type { HeightMode } from './compute/terrain'
+import { BASEMAPS, type BasemapId } from './map/style'
 import type { ColorScheme } from './render/agl'
 import type { LngLat } from './terrain/geo'
 import { formatWaypoints, parseWaypoints } from './waypoints'
@@ -17,7 +18,10 @@ export interface Settings {
   arrivalHeight: number
 }
 
-export const DEFAULTS: Omit<Settings, 'start' | 'landing' | 'waypoints'> = {
+/** The settings that are not specific to a plan's places. */
+export type Assumptions = Omit<Settings, 'start' | 'landing' | 'waypoints'>
+
+export const DEFAULTS: Assumptions = {
   startHeight: 0,
   startHeightMode: 'agl',
   glideRatio: 5,
@@ -60,11 +64,35 @@ const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.min(hi, M
 export const GLIDE_STEP = 0.5
 export const roundGlideRatio = (v: number) => Math.round(v / GLIDE_STEP) * GLIDE_STEP
 
+/**
+ * Assumptions that differ from their defaults are kept in this browser, so they last
+ * beyond a session (the installed app opens without them in its URL). A link's values
+ * take precedence; places (start, landing, waypoints) belong to a plan and are not kept.
+ */
+const ASSUMPTIONS_KEY = 'hike-and-fly:assumptions'
+
+function readStoredAssumptions(): Partial<Record<keyof Assumptions, unknown>> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ASSUMPTIONS_KEY) ?? '{}')
+    return stored && typeof stored === 'object' ? stored : {}
+  } catch {
+    return {}
+  }
+}
+
+const assumptionsOf = (s: Settings): Assumptions =>
+  Object.fromEntries((Object.keys(DEFAULTS) as (keyof Assumptions)[]).map((k) => [k, s[k]])) as unknown as Assumptions
+
 function readUrl(): Settings {
   const p = new URLSearchParams(location.hash.slice(1))
-  const num = (key: string, fallback: number, limits: readonly [number, number]) => {
-    const v = Number(p.get(key))
-    return p.has(key) && Number.isFinite(v) ? clamp(v, limits) : fallback
+  const stored = readStoredAssumptions()
+  /** The link's value, else the stored one. */
+  const raw = (urlKey: string, key: keyof Assumptions): string | null =>
+    p.get(urlKey) ?? (stored[key] == null ? null : String(stored[key]))
+  const num = (urlKey: string, key: keyof typeof LIMITS) => {
+    const r = raw(urlKey, key)
+    const v = Number(r)
+    return r !== null && Number.isFinite(v) ? clamp(v, LIMITS[key]) : DEFAULTS[key]
   }
   const point = (latKey: string, lngKey: string): LngLat | null => {
     const lat = Number(p.get(latKey))
@@ -76,13 +104,13 @@ function readUrl(): Settings {
     start: point('lat', 'lng'),
     landing: point('llat', 'llng'),
     waypoints: parseWaypoints(p.get('wp')),
-    startHeight: num('h', DEFAULTS.startHeight, LIMITS.startHeight),
-    startHeightMode: p.get('hm') === 'amsl' ? 'amsl' : 'agl',
-    glideRatio: roundGlideRatio(num('gr', DEFAULTS.glideRatio, LIMITS.glideRatio)),
-    clearance: num('cl', DEFAULTS.clearance, LIMITS.clearance),
-    launchZone: num('lz', DEFAULTS.launchZone, LIMITS.launchZone),
-    takeoffRun: num('tr', DEFAULTS.takeoffRun, LIMITS.takeoffRun),
-    arrivalHeight: num('ar', DEFAULTS.arrivalHeight, LIMITS.arrivalHeight),
+    startHeight: num('h', 'startHeight'),
+    startHeightMode: raw('hm', 'startHeightMode') === 'amsl' ? 'amsl' : 'agl',
+    glideRatio: roundGlideRatio(num('gr', 'glideRatio')),
+    clearance: num('cl', 'clearance'),
+    launchZone: num('lz', 'launchZone'),
+    takeoffRun: num('tr', 'takeoffRun'),
+    arrivalHeight: num('ar', 'arrivalHeight'),
   }
 }
 
@@ -110,6 +138,24 @@ export function writeUrl(s: Settings): void {
 
 export const settings: Settings = $state(readUrl())
 
+/** The assumptions as loaded: opening a link stores nothing until one of them is changed. */
+const loadedAssumptions = JSON.stringify(assumptionsOf(settings))
+let assumptionsChanged = false
+
+/** Stores the assumptions that differ from their defaults, once any has been changed. */
+export function saveAssumptions(s: Settings): void {
+  const current = assumptionsOf(s)
+  if (!assumptionsChanged && JSON.stringify(current) === loadedAssumptions) return
+  assumptionsChanged = true
+  const changed = Object.fromEntries(Object.entries(current).filter(([k, v]) => v !== DEFAULTS[k as keyof Assumptions]))
+  try {
+    if (Object.keys(changed).length) localStorage.setItem(ASSUMPTIONS_KEY, JSON.stringify(changed))
+    else localStorage.removeItem(ASSUMPTIONS_KEY)
+  } catch {
+    // Storage unavailable (private mode, blocked): the values last for this visit.
+  }
+}
+
 /** Per-viewer display preferences: kept in this browser, not in shared links. */
 export interface Preferences {
   colorScheme: ColorScheme
@@ -117,7 +163,12 @@ export interface Preferences {
   showSlope: boolean
   /** Outlines of the areas downloaded for offline use. */
   showOfflineAreas: boolean
+  basemap: BasemapId
+  /** Finest map zoom for offline downloads. */
+  offlineMapZoom: number
 }
+
+const OFFLINE_MAP_ZOOMS = [13, 14, 15, 16]
 
 const PREFERENCES_KEY = 'hike-and-fly:preferences'
 
@@ -128,9 +179,11 @@ function readPreferences(): Preferences {
       colorScheme: stored.colorScheme === 'colorblind' ? 'colorblind' : 'standard',
       showSlope: stored.showSlope === true,
       showOfflineAreas: stored.showOfflineAreas !== false,
+      basemap: Object.hasOwn(BASEMAPS, stored.basemap) ? stored.basemap : 'swisstopo',
+      offlineMapZoom: OFFLINE_MAP_ZOOMS.includes(stored.offlineMapZoom) ? stored.offlineMapZoom : 14,
     }
   } catch {
-    return { colorScheme: 'standard', showSlope: false, showOfflineAreas: true }
+    return { colorScheme: 'standard', showSlope: false, showOfflineAreas: true, basemap: 'swisstopo', offlineMapZoom: 14 }
   }
 }
 
