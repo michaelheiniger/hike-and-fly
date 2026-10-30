@@ -46,8 +46,8 @@ export const fr: Messages = {
     distance: 'Distance',
     straightDistance: 'Distance en ligne droite',
     straightRatio: 'Finesse en ligne droite',
-    straightRatioTitle:
-      'Finesse en ligne droite, sans tenir compte du relief : distance divisée par la hauteur jusqu’au sol de l’atterrissage, sans hauteur d’arrivée',
+    straightRatioTitle: (arrival) =>
+      `Finesse en ligne droite, sans tenir compte du relief : distance divisée par la hauteur, avec ${arrival} m au-dessus de l’atterrissage`,
     where: (distance, elevation) => `à ${distance} (${elevation} m)`,
     terrainBlocks: (where) => `Le relief bloque la ligne droite ${where}.`,
     terrainRaises: (ratio, where) => `Le relief porte la ligne droite à ${ratio} : sol ${where}.`,

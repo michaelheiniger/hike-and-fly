@@ -48,8 +48,8 @@ export const de: Messages = {
     distance: 'Distanz',
     straightDistance: 'Luftlinie',
     straightRatio: 'Gleitzahl auf der Luftlinie',
-    straightRatioTitle:
-      'Gleitzahl auf der Luftlinie, ohne Gelände: Distanz durch die Höhe bis zum Boden des Landeplatzes, ohne Ankunftshöhe',
+    straightRatioTitle: (arrival) =>
+      `Gleitzahl auf der Luftlinie, ohne Gelände: Distanz durch Höhe, mit ${arrival} m über dem Landeplatz`,
     where: (distance, elevation) => `nach ${distance} (${elevation} m)`,
     terrainBlocks: (where) => `Das Gelände versperrt die Luftlinie ${where}.`,
     terrainRaises: (ratio, where) => `Das Gelände erhöht die Luftlinie auf ${ratio}: Boden ${where}.`,
