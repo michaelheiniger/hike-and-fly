@@ -23,6 +23,7 @@
     height: 'M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4',
     distance: 'M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4',
     straight: 'M4 6l16 12',
+    to: 'M4 12h16M14 6l6 6-6 6',
   }
 
   const coords = (p: { lat: number; lng: number }) => `${p.lat.toFixed(4)}°, ${p.lng.toFixed(4)}°`
@@ -67,27 +68,24 @@
 
 {#if settings.start}
   <section>
-    <div class="place" title="Start: {coords(settings.start)}">
-      {@render pin('#1a1a19')}
-      <span class="visually-hidden">Start</span>
-      <span class="value">
-        {#if reach}
+    <div class="places">
+      <span class="place" title="Start: {coords(settings.start)}">
+        {@render pin('#1a1a19')}
+        <span class="visually-hidden">Start</span>
+        {#if reach && aboveGround}
+          <span title="Start altitude, {aboveGround} m above the ground ({Math.round(reach.startElevation)} m)">
+            {@render icon('altitude', 'Start altitude')}{Math.round(reach.startAltitude)} m
+          </span>
+        {:else if reach}
           <span title="Ground at the start">{@render icon('ground', 'Ground')}{Math.round(reach.startElevation)} m</span>
-          {#if aboveGround}
-            <span title="Start altitude, {aboveGround} m above the ground">
-              {@render icon('altitude', 'Start altitude')}{Math.round(reach.startAltitude)} m
-            </span>
-          {/if}
         {/if}
       </span>
-      <span></span>
-    </div>
 
-    {#if settings.landing}
-      <div class="place" title="Landing: {coords(settings.landing)}">
-        {@render pin('#2a78d6')}
-        <span class="visually-hidden">Landing</span>
-        <span class="value">
+      {#if settings.landing}
+        {@render icon('to', 'to')}
+        <span class="place" title="Landing: {coords(settings.landing)}">
+          {@render pin('#2a78d6')}
+          <span class="visually-hidden">Landing</span>
           {#if route}
             <span title="Ground at the landing">{@render icon('ground', 'Ground')}{Math.round(route.landingElevation)} m</span>
           {/if}
@@ -95,8 +93,10 @@
         <button type="button" class="remove" aria-label="Remove the landing" title="Remove the landing" onclick={onclearlanding}>
           ✕
         </button>
-      </div>
+      {/if}
+    </div>
 
+    {#if settings.landing}
       {#if route}
         <div class="facts">
           <span title="From the start altitude down to the landing">
@@ -148,28 +148,23 @@
     gap: 4px;
   }
 
-  /* Pin, heights, remove button; the coordinates are in the row's tooltip. */
-  .place {
-    display: grid;
-    grid-template-columns: 16px 1fr 18px;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .value,
+  /* Start → landing on one line; the coordinates are in each place's tooltip. */
+  .places,
+  .place,
   .facts {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
-  .facts {
-    padding-left: 22px;
-    flex-wrap: wrap;
+  .place {
+    gap: 6px;
   }
 
-  .value > span,
+  .place > span,
   .facts > span {
     display: inline-flex;
     align-items: center;
@@ -191,6 +186,7 @@
   }
 
   .remove {
+    margin-left: auto;
     border: 0;
     background: none;
     padding: 0;
