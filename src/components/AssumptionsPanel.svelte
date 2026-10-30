@@ -186,7 +186,7 @@
     <table class="ramp small">
       <tbody>
         <tr>
-          <th scope="row">Distance (m)</th>
+          <th scope="row">After liftoff (m)</th>
           {#each ramp as r (r.distance)}<td>{Math.round(r.distance)}</td>{/each}
         </tr>
         <tr>

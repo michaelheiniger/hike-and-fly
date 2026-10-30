@@ -164,8 +164,10 @@ next to 50 m, see §10.
 ### 3.4 Launch zone: the clearance ramp
 
 From a ground launch the glider starts at AGL 0, so a constant clearance would make nothing
-reachable. The clearance therefore **ramps from 0 at the start to `C` at `L`**, growing with
-the cube of the distance ([ADR-0011](adr/0011-launch-zone-ramp-and-takeoff-run.md)):
+reachable. The clearance therefore **ramps from 0 at the liftoff to `C` at `L` after it**,
+growing with the cube of the distance ([ADR-0011](adr/0011-launch-zone-ramp-and-takeoff-run.md)).
+The liftoff is the start, or the end of the takeoff run (§3.5); `d` is the distance flown
+since it:
 
 ```
 c(d) = C · min(1, d / L)³

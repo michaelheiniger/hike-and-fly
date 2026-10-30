@@ -13,8 +13,8 @@ everything (Amisbühl: 6.5 instead of 5.0).
 
 ## Decision
 
-- **Launch zone** (default 500 m): the clearance grows with the **cube** of the distance,
-  `c(d) = C · min(1, d / L)³` (1/8 of it at mid-distance). The Assumptions panel lists its
+- **Launch zone** (default 500 m): the clearance grows with the **cube** of the distance
+  flown since the liftoff, `c(d) = C · min(1, d / L)³` (1/8 of it at mid-distance). The Assumptions panel lists its
   value at each quarter.
 - **Takeoff run** (default 30 m, ground launches only): every cell within the run and not
   above the start is an extra source of the search, at its own ground, with a distance equal
