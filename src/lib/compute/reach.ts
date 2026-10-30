@@ -40,8 +40,6 @@ export interface ReachResult {
   reachableCells: number
   /** Distance flown at each cell's liftoff, null without a takeoff run (see GlideResult). */
   glideStart: Float32Array | null
-  /** Ground elevation per cell (m AMSL): its highest point, as the search uses it. */
-  elevation: Float32Array
   /** Reachable cells beyond the launch zone, which is left uncolored on the map. */
   beyondLaunchZone: number
   timings: { terrain: number; search: number }
@@ -96,7 +94,6 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
     agl,
     distance: result.distance,
     glideStart: result.glideStart,
-    elevation,
     truncated: result.truncated,
     reachableCells,
     beyondLaunchZone,
