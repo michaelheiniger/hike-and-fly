@@ -234,6 +234,7 @@
   }
 
   let reportDialog: ReportDialog
+  let planPanel: AssumptionsPanel
 
   /** What an issue report attaches: this plan and what the app shows. */
   function reportContext(): ReportContext {
@@ -339,27 +340,39 @@
     {/if}
     <header>
       <h1 class="visually-hidden">Hike &amp; Fly Planner</h1>
-      {#if !online}<span class="offline-badge">Offline</span>{/if}
+      <div class="header-row">
+        {#if !online}<span class="offline-badge">Offline</span>{/if}
+        <span class="hint">{settings.start ? 'Click on the map sets' : 'Click the map to set the start.'}</span>
+        <button
+          type="button"
+          class="settings-button"
+          aria-label="Settings"
+          title="Settings: map, offline, assumptions"
+          onclick={() => planPanel.openSettings()}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+            <circle cx="16" cy="6" r="2" />
+            <circle cx="10" cy="12" r="2" />
+            <circle cx="18" cy="18" r="2" />
+          </svg>
+        </button>
+      </div>
       {#if settings.start}
-        <div class="click-mode">
-          <span>Click on the map sets</span>
-          <span class="segmented" role="group" aria-label="Click on the map sets">
-            <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>Start</button>
-            <button type="button" aria-pressed={clickSets === 'waypoint'} onclick={() => (clickSets = 'waypoint')}>Waypoint</button>
-            <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>Landing</button>
-          </span>
-        </div>
-      {:else}
-        <p class="hint">Click the map to set the start.</p>
+        <span class="segmented" role="group" aria-label="Click on the map sets">
+          <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>Start</button>
+          <button type="button" aria-pressed={clickSets === 'waypoint'} onclick={() => (clickSets = 'waypoint')}>Waypoint</button>
+          <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>Landing</button>
+        </span>
       {/if}
     </header>
 
     <AssumptionsPanel
+      bind:this={planPanel}
       result={reach}
       {elevationSource}
       computing={busy.reach}
       error={reachError}
-      collapsible={narrow}
       bind:basemap
     >
       {#snippet landing()}
@@ -398,18 +411,19 @@
           {view}
           bind:areas={offlineAreas}
           {online}
-          folded={!narrow}
           onshow={(b) => {
+            planPanel.closeSettings()
             fitTo = { ...b }
             basemap = 'swisstopo'
           }}
         />
-        <section class="report">
-          <button type="button" class="link" onclick={() => reportDialog.open()}>Report an issue</button>
-          <span class="hint">With this plan and its results attached, so the problem can be reproduced.</span>
-        </section>
       {/snippet}
     </AssumptionsPanel>
+
+    <section class="report">
+      <button type="button" class="link" onclick={() => reportDialog.open()}>Report an issue</button>
+      <span class="hint">With this plan and its results attached, so the problem can be reproduced.</span>
+    </section>
   </aside>
 
   <ReportDialog bind:this={reportDialog} context={reportContext} />
@@ -479,6 +493,36 @@
     white-space: nowrap;
   }
 
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-row .hint {
+    flex: 1;
+  }
+
+  .settings-button {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--text-muted);
+  }
+
+  .settings-button:hover {
+    color: var(--text);
+  }
+
   .offline-badge {
     font-size: 11px;
     font-weight: 500;
@@ -510,14 +554,6 @@
     cursor: pointer;
   }
 
-  .click-mode {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    color: var(--text-muted);
-  }
-
   .segmented {
     display: inline-flex;
     border: 1px solid var(--border);
@@ -525,7 +561,9 @@
     overflow: hidden;
   }
 
+  /* Equal widths across the panel. */
   .segmented button {
+    flex: 1;
     border: 0;
     border-radius: 0;
     padding: 4px 10px;

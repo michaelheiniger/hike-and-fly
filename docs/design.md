@@ -121,8 +121,10 @@ The grid covers the box of all points. The reach overlay ignores waypoints. In l
 
 ## 2. Assumptions and defaults
 
-Defaults are always visible in an **Assumptions panel**, each with an explanation, and every
-one of them can be changed. All settings are encoded in the URL so plans can be shared.
+The glide ratio and start height are in the side panel; the other assumptions are in the
+**Settings dialog** (opened from the panel's header, together with the map and offline
+settings), each with its default marked and an explanation, and every one of them can be
+changed. All settings are encoded in the URL so plans can be shared.
 
 | Setting | Default | Rationale |
 |---|---|---|

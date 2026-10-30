@@ -14,15 +14,24 @@
     computing: boolean
     error: string | null
     basemap: BasemapId
-    /** Rendered after the glide inputs (the landing and its routes), always visible. */
+    /** Rendered after the glide inputs (the landing and its routes). */
     landing?: Snippet
-    /** Rendered after the settings, inside the fold when collapsible. */
+    /** Rendered in the settings dialog after the map settings (offline areas). */
     footer?: Snippet
-    /** Folds the settings below the landing behind a summary line (narrow screens). */
-    collapsible?: boolean
   }
 
-  let { result, elevationSource, computing, error, basemap = $bindable(), landing, footer, collapsible = false }: Props = $props()
+  let { result, elevationSource, computing, error, basemap = $bindable(), landing, footer }: Props = $props()
+
+  let dialog: HTMLDialogElement
+
+  /** Opens the settings: map, offline areas and assumptions. */
+  export function openSettings() {
+    dialog.showModal()
+  }
+
+  export function closeSettings() {
+    dialog.close()
+  }
 
   const ground = $derived(result?.startElevation ?? null)
 
@@ -285,8 +294,16 @@
   >
 {/snippet}
 
-{#snippet settingsBody()}
+<!-- A click on the backdrop (the dialog element itself, outside its content) closes it. -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<dialog bind:this={dialog} aria-labelledby="settings-title" onclick={(e) => e.target === dialog && dialog.close()}>
+  <div class="dialog-head">
+    <h2 id="settings-title" class="title">Settings</h2>
+    <button type="button" class="close" aria-label="Close settings" onclick={() => dialog.close()}>✕</button>
+  </div>
+
   <section>
+    <h2>Map</h2>
     <label class="field">
       <span class="label">Map</span>
       <select bind:value={basemap}>
@@ -319,69 +336,58 @@
 
   {@render footer?.()}
 
-  {#if collapsible}
-    <section>
-      <h2>Assumptions</h2>
-      {@render assumptionFields()}
-    </section>
-  {:else}
-    <details class="fold">
-      <summary><h2>Assumptions</h2></summary>
-      <section class="fold-body">{@render assumptionFields()}</section>
-    </details>
-  {/if}
-{/snippet}
-
-{#if collapsible}
-  <details class="settings fold">
-    <summary>
-      <span class="label">Settings</span>
-      <span class="muted small">
-        Map, offline, assumptions
-      </span>
-    </summary>
-    <div class="settings-body">{@render settingsBody()}</div>
-  </details>
-{:else}
-  {@render settingsBody()}
-{/if}
+  <section>
+    <h2>Assumptions</h2>
+    {@render assumptionFields()}
+  </section>
+</dialog>
 
 <style>
-  .fold summary {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    cursor: pointer;
-    list-style: none;
+  dialog {
+    width: min(400px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0 16px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
   }
 
-  .fold summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .fold summary::after {
-    content: '▾';
-    color: var(--text-muted);
-  }
-
-  .fold[open] summary::after {
-    content: '▴';
-  }
-
-  .settings summary .muted {
-    margin-left: auto;
-  }
-
-  .fold-body {
-    margin-top: 6px;
-  }
-
-  .settings-body {
+  dialog[open] {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin-top: 12px;
+    gap: 18px;
+  }
+
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.4);
+  }
+
+  /* Stays at the top while the settings scroll. */
+  .dialog-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 4px;
+    background: var(--surface);
+  }
+
+  h2.title {
+    font-size: 16px;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+  }
+
+  .close {
+    border: 0;
+    background: none;
+    padding: 2px 6px;
+    color: var(--text-muted);
   }
 
   section {
