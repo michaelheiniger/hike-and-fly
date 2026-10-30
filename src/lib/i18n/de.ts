@@ -246,4 +246,25 @@ export const de: Messages = {
     terrainAt: (altitude, terrain) => `${altitude} m ü. M. · Gelände ${terrain} m`,
     resetZoom: 'Zoom zurücksetzen',
   },
+
+  report: {
+    title: 'Problem melden',
+    explain:
+      'Beschreiben, was schiefgelaufen ist. Der Plan und was die App anzeigt werden mitgeschickt, damit sich das Problem nachvollziehen lässt. Kein Konto nötig.',
+    category: 'Worum geht es?',
+    categories: {
+      results: 'Ergebnisse scheinen falsch',
+      terrain: 'Karte oder Höhendaten',
+      bug: 'Etwas funktioniert nicht',
+      other: 'Anderes',
+    },
+    message: 'Was ist passiert, und was wurde erwartet?',
+    email: 'E-Mail für eine Antwort (freiwillig)',
+    details: 'Mitgeschickte Details (auf Englisch)',
+    close: 'Schliessen',
+    send: 'Senden',
+    sending: 'Wird gesendet…',
+    sent: 'Danke: Die Meldung wurde gesendet.',
+    failed: 'Die Meldung konnte nicht gesendet werden. Die Verbindung prüfen und nochmals versuchen.',
+  },
 }

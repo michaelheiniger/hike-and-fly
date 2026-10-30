@@ -255,6 +255,27 @@ export const en = {
     terrainAt: (altitude: number, terrain: number) => `${altitude} m AMSL · terrain ${terrain} m`,
     resetZoom: 'Reset zoom',
   },
+
+  report: {
+    title: 'Report an issue',
+    explain:
+      'Describe what went wrong. The plan and what the app shows are attached, so the problem can be reproduced. No account needed.',
+    category: 'What is it about?',
+    categories: {
+      results: 'Results look wrong',
+      terrain: 'Map or elevation data',
+      bug: 'Something does not work',
+      other: 'Other',
+    },
+    message: 'What happened, and what did you expect?',
+    email: 'Your email, for a reply (optional)',
+    details: 'Details attached (in English)',
+    close: 'Close',
+    send: 'Send',
+    sending: 'Sending…',
+    sent: 'Thank you: the report was sent.',
+    failed: 'The report could not be sent. Check the connection and try again.',
+  },
 }
 
 export type Messages = typeof en

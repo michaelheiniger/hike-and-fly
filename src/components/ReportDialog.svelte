@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.svelte'
   import {
     REPORT_CATEGORIES,
     reportDetails,
@@ -22,7 +23,10 @@
   let email = $state('')
   /** Honeypot: hidden from people, ticked by naive bots; such submissions are dropped. */
   let botcheck = $state(false)
-  let status = $state<{ kind: 'sending' | 'success' | 'error'; text: string } | null>(null)
+  let status = $state<'sending' | 'success' | 'error' | null>(null)
+  const statusText = $derived(
+    status === 'sending' ? t.report.sending : status === 'success' ? t.report.sent : status === 'error' ? t.report.failed : '',
+  )
 
   export function open() {
     attached = context()
@@ -33,52 +37,49 @@
   async function submit(e: SubmitEvent) {
     e.preventDefault()
     if (botcheck || !attached) return
-    status = { kind: 'sending', text: 'Sending…' }
+    status = 'sending'
     try {
       await sendReport(reportPayload(attached, { category, message, email }))
       message = ''
-      status = { kind: 'success', text: 'Thank you: the report was sent.' }
+      status = 'success'
     } catch {
-      status = { kind: 'error', text: 'The report could not be sent. Check the connection and try again.' }
+      status = 'error'
     }
   }
 </script>
 
 <dialog bind:this={dialog} aria-labelledby="report-title">
   <form onsubmit={submit}>
-    <h2 id="report-title">Report an issue</h2>
-    <p class="muted">
-      Describe what went wrong. The plan and what the app shows are attached, so the problem can be reproduced. No
-      account needed.
-    </p>
+    <h2 id="report-title">{t.report.title}</h2>
+    <p class="muted">{t.report.explain}</p>
 
-    <label for="report-category">What is it about?</label>
+    <label for="report-category">{t.report.category}</label>
     <select id="report-category" bind:value={category}>
-      {#each Object.entries(REPORT_CATEGORIES) as [value, label] (value)}
-        <option {value}>{label}</option>
+      {#each Object.keys(REPORT_CATEGORIES) as ReportCategory[] as value (value)}
+        <option {value}>{t.report.categories[value]}</option>
       {/each}
     </select>
 
-    <label for="report-message">What happened, and what did you expect?</label>
+    <label for="report-message">{t.report.message}</label>
     <textarea id="report-message" bind:value={message} rows="5" maxlength="5000" required></textarea>
 
-    <label for="report-email">Your email, for a reply (optional)</label>
+    <label for="report-email">{t.report.email}</label>
     <input id="report-email" type="email" autocomplete="email" bind:value={email} />
 
     <input type="checkbox" class="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true" bind:checked={botcheck} />
 
     {#if attached}
       <details>
-        <summary>Details attached</summary>
+        <summary>{t.report.details}</summary>
         <pre>{reportDetails(attached)}</pre>
       </details>
     {/if}
 
-    <p class="status {status?.kind ?? ''}" role="status">{status?.text ?? ''}</p>
+    <p class="status {status ?? ''}" role="status">{statusText}</p>
 
     <div class="actions">
-      <button type="button" onclick={() => dialog.close()}>Close</button>
-      <button type="submit" class="primary" disabled={status?.kind === 'sending'}>Send</button>
+      <button type="button" onclick={() => dialog.close()}>{t.report.close}</button>
+      <button type="submit" class="primary" disabled={status === 'sending'}>{t.report.send}</button>
     </div>
   </form>
 </dialog>

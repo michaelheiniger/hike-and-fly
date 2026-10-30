@@ -244,4 +244,25 @@ export const fr: Messages = {
     terrainAt: (altitude, terrain) => `${altitude} m alt. · relief ${terrain} m`,
     resetZoom: 'Réinitialiser le zoom',
   },
+
+  report: {
+    title: 'Signaler un problème',
+    explain:
+      'Décrivez ce qui ne va pas. Le plan et ce qu’affiche l’app sont joints, pour que le problème puisse être reproduit. Aucun compte nécessaire.',
+    category: 'De quoi s’agit-il ?',
+    categories: {
+      results: 'Les résultats semblent faux',
+      terrain: 'Carte ou données d’altitude',
+      bug: 'Quelque chose ne fonctionne pas',
+      other: 'Autre',
+    },
+    message: 'Que s’est-il passé, et qu’attendiez-vous ?',
+    email: 'Votre e-mail, pour une réponse (facultatif)',
+    details: 'Détails joints (en anglais)',
+    close: 'Fermer',
+    send: 'Envoyer',
+    sending: 'Envoi…',
+    sent: 'Merci : le signalement a été envoyé.',
+    failed: 'Le signalement n’a pas pu être envoyé. Vérifiez la connexion et réessayez.',
+  },
 }
