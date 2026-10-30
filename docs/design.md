@@ -129,7 +129,13 @@ changed. All settings are encoded in the URL so plans can be shared. Assumptions
 differ from their defaults are also kept in the browser and used when the URL has none
 (a link's values win; opening a link stores nothing until an assumption is changed), so
 they last when the installed app opens. Display preferences (map, colors, overlays,
-offline map detail) are kept in the browser too.
+offline map detail, language) are kept in the browser too.
+
+The interface is in **English, French and German**: the browser's language at first, then
+the one chosen in the settings. Numbers and dates follow Swiss conventions per language
+(4.2 km in German, 4,2 km in French); German uses Swiss spelling (ss, never ß). The
+computations report problems as codes the interface words in its language; issue reports
+stay in English.
 
 | Setting | Default | Rationale |
 |---|---|---|
@@ -209,7 +215,8 @@ src/
   lib/compute/     reach pipeline (terrain → search), Web Worker and its client
   lib/render/      AGL color bands and overlay image
   lib/map/         basemap definitions
-  lib/settings.svelte.ts   defaults, explanations, URL encoding
+  lib/settings.svelte.ts   defaults, URL encoding, browser preferences
+  lib/i18n/        interface text: en (reference), fr, de; number and date formats
   components/      Svelte UI (map, assumptions panel, legend)
 ```
 
