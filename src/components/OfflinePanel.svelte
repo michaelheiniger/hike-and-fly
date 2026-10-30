@@ -51,12 +51,13 @@
     message = null
     controller = new AbortController()
     loader ??= new TileLoader(AWS_TERRARIUM, SWISS_ARCHIVE.url)
-    progress = { done: 0, total: tileCount, bytes: 0, failed: 0 }
+    progress = { done: 0, total: tileCount, bytes: 0, failed: 0, reused: 0 }
     try {
       const area = await downloadArea($state.snapshot(plan), loader, (p) => (progress = p), controller.signal)
+      const reused = progress?.reused ?? 0
       areas = listAreas()
       message = area.complete
-        ? `Saved: ${area.tiles} tiles, ${mb(area.bytes)} MB.`
+        ? `Saved: ${area.tiles} tiles, ${mb(area.bytes)} MB${reused ? ` (${reused} already stored for other areas)` : ''}.`
         : `Saved with gaps: ${progress?.failed} tiles could not be downloaded.`
     } catch (err) {
       message = err instanceof DOMException && err.name === 'AbortError' ? 'Download cancelled.' : `Download failed: ${err}`
@@ -138,7 +139,8 @@
           </div>
           <div class="actions">
             <button type="button" class="link" onclick={() => onshow(area.bounds)}>Show</button>
-            <button type="button" class="link" onclick={() => remove(area)}>Delete</button>
+            <!-- A download may be reusing this area's tiles. -->
+            <button type="button" class="link" onclick={() => remove(area)} disabled={!!progress}>Delete</button>
           </div>
         </li>
       {/each}

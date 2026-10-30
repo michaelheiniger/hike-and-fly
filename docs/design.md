@@ -230,9 +230,13 @@ dialog before sending. A hidden checkbox catches naive bots.
 - **App shell:** a hand-written service worker (`sw/service-worker.js`) precaches the built
   files; a small Vite plugin fills in the file list and a version per build. Navigations
   fall back to the cached shell. Installable as a PWA (manifest, icons). Production only.
-- **Areas:** "Download this area" stores what the visible map area needs, one Cache Storage
-  cache per area (`hf-area-<id>`), with tile count and size estimate first, progress,
-  cancel, and a list of saved areas (show/delete); storage persistence is requested.
+- **Areas:** "Download this area" stores what the visible map area needs in one Cache
+  Storage cache shared by all areas (`hf-tiles`), with tile count and size estimate first,
+  progress, cancel, and a list of saved areas (show/delete); storage persistence is
+  requested. Each area lists its tiles in a manifest (`/offline-areas/<id>.json`): tiles
+  already stored are reused, deleting an area deletes only the tiles no other area uses,
+  and downloading the same area again replaces it. Older areas keep their own cache
+  (`hf-area-<id>`).
   - swisstopo map and slope-class tiles, zooms 8 to the chosen detail (13–16), under their
     real URLs, served by the service worker. OpenTopoMap is excluded: its policy forbids
     bulk downloads.

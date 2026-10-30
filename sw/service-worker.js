@@ -2,8 +2,8 @@
 //
 // - The app shell (built files) is precached on install and served cache-first.
 // - Page navigations try the network first and fall back to the cached shell.
-// - Map tiles are served from downloaded areas (caches named hf-area-*) when
-//   present, else from the network. Elevation tiles are read by the app itself.
+// - Map tiles are served from downloaded areas (the shared cache hf-tiles, or
+//   hf-area-* for older downloads) when present, else from the network. Elevation tiles are read by the app itself.
 //
 // The build fills in the version and the list of files to precache, relative to
 // this script (see vite.config.ts).

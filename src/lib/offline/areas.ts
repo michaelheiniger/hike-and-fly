@@ -1,7 +1,7 @@
 import { BASEMAPS, SLOPE_OVERLAY } from '../map/style'
 import { tilesCovering } from '../terrain/terrarium'
 import type { TileLoader } from '../terrain/loader'
-import { AREA_CACHE_PREFIX, offlineElevationUrl } from './store'
+import { AREA_CACHE_PREFIX, TILE_CACHE, areaManifestUrl, offlineElevationUrl } from './store'
 
 export interface Bounds {
   west: number
@@ -10,7 +10,11 @@ export interface Bounds {
   north: number
 }
 
-/** A downloaded area: its tiles live in the cache named AREA_CACHE_PREFIX + id. */
+/**
+ * A downloaded area: its tiles live in TILE_CACHE, shared with other areas, and are
+ * listed in its manifest (areaManifestUrl). Areas downloaded before tiles were
+ * shared have no manifest and their own cache, AREA_CACHE_PREFIX + id.
+ */
 export interface OfflineArea {
   id: string
   name: string
@@ -18,6 +22,7 @@ export interface OfflineArea {
   /** Finest map zoom stored. */
   mapMaxZoom: number
   tiles: number
+  /** Size of the area's tiles, including those shared with other areas. */
   bytes: number
   /** ISO date. */
   created: string
@@ -107,9 +112,27 @@ function saveAreas(areas: OfflineArea[]): void {
   }
 }
 
+/** Keys of the tiles an area uses; empty for areas without a manifest. */
+async function manifest(cache: Cache, id: string): Promise<string[]> {
+  const response = await cache.match(areaManifestUrl(id))
+  return response ? await response.json() : []
+}
+
+/** Deletes those of `keys` that no saved area uses any more. */
+async function releaseTiles(cache: Cache, keys: Iterable<string>): Promise<void> {
+  const used = new Set<string>()
+  for (const area of listAreas()) for (const key of await manifest(cache, area.id)) used.add(key)
+  for (const key of keys) if (!used.has(key)) await cache.delete(key)
+}
+
+/** Deletes an area and the tiles that only it uses. */
 export async function deleteArea(id: string): Promise<void> {
-  await caches.delete(AREA_CACHE_PREFIX + id)
+  const cache = await caches.open(TILE_CACHE)
+  const keys = await manifest(cache, id)
   saveAreas(listAreas().filter((a) => a.id !== id))
+  await releaseTiles(cache, keys)
+  await cache.delete(areaManifestUrl(id))
+  await caches.delete(AREA_CACHE_PREFIX + id)
 }
 
 export function areaName(b: Bounds): string {
@@ -125,6 +148,8 @@ export interface DownloadProgress {
   total: number
   bytes: number
   failed: number
+  /** Tiles already stored for another area, not downloaded again. */
+  reused: number
 }
 
 const CONCURRENCY = 6
@@ -141,8 +166,9 @@ async function withRetry<T>(task: () => Promise<T>, attempts = 3): Promise<T> {
 }
 
 /**
- * Downloads an area into its own cache and records it. Stops early when `signal`
- * aborts (the partial cache is deleted).
+ * Downloads the tiles of an area that are not stored yet and records the area.
+ * An area with the same bounds and detail is replaced. Stops early when `signal`
+ * aborts (the tiles downloaded so far are deleted).
  */
 export async function downloadArea(
   plan: AreaPlan,
@@ -151,36 +177,44 @@ export async function downloadArea(
   signal: AbortSignal,
 ): Promise<OfflineArea> {
   const id = `${Date.now().toString(36)}`
-  const cache = await caches.open(AREA_CACHE_PREFIX + id)
+  const cache = await caches.open(TILE_CACHE)
   // Ask the browser not to evict downloaded areas under storage pressure.
   await navigator.storage?.persist?.().catch(() => false)
 
-  type Job = () => Promise<number>
-  const jobs: Job[] = [
-    ...plan.mapTiles.map((url): Job => async () => {
-      const response = await fetch(url, { signal })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const blob = await response.blob()
-      await cache.put(url, new Response(blob, { headers: { 'Content-Type': blob.type } }))
-      return blob.size
-    }),
-    ...plan.elevationTiles.map(([z, x, y]): Job => async () => {
-      const blob = await loader.tileBytes(z, x, y, { offline: false })
-      await cache.put(offlineElevationUrl(z, x, y), new Response(blob, { headers: { 'Content-Type': 'image/png' } }))
-      return blob.size
-    }),
+  type Tile = { key: string; get: () => Promise<Blob> }
+  const tiles: Tile[] = [
+    ...plan.mapTiles.map((url) => ({
+      key: url,
+      get: async () => {
+        const response = await fetch(url, { signal })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        return response.blob()
+      },
+    })),
+    ...plan.elevationTiles.map(([z, x, y]) => ({
+      key: offlineElevationUrl(z, x, y),
+      get: () => loader.tileBytes(z, x, y, { offline: false }),
+    })),
   ]
 
-  const progress: DownloadProgress = { done: 0, total: jobs.length, bytes: 0, failed: 0 }
+  const progress: DownloadProgress = { done: 0, total: tiles.length, bytes: 0, failed: 0, reused: 0 }
+  const stored: string[] = []
+  const added: string[] = []
   let next = 0
   const run = async () => {
-    while (next < jobs.length && !signal.aborted) {
-      const job = jobs[next++]
+    while (next < tiles.length && !signal.aborted) {
+      const tile = tiles[next++]
       try {
+        const hit = await cache.match(tile.key)
         // Await first: `progress.bytes += await …` would read the total before awaiting
         // and lose the other downloads' bytes.
-        const size = await withRetry(job)
-        progress.bytes += size
+        const blob = hit ? await hit.blob() : await withRetry(tile.get)
+        if (!hit) {
+          await cache.put(tile.key, new Response(blob, { headers: { 'Content-Type': blob.type || 'image/png' } }))
+          added.push(tile.key)
+        } else progress.reused++
+        stored.push(tile.key)
+        progress.bytes += blob.size
       } catch {
         if (signal.aborted) return
         progress.failed++
@@ -192,9 +226,10 @@ export async function downloadArea(
   await Promise.all(Array.from({ length: CONCURRENCY }, run))
 
   if (signal.aborted) {
-    await caches.delete(AREA_CACHE_PREFIX + id)
+    await releaseTiles(cache, added)
     throw new DOMException('Download cancelled', 'AbortError')
   }
+  await cache.put(areaManifestUrl(id), Response.json(stored))
   const area: OfflineArea = {
     id,
     name: areaName(plan.bounds),
@@ -205,6 +240,11 @@ export async function downloadArea(
     created: new Date().toISOString(),
     complete: progress.failed === 0,
   }
+  // Record the new area before deleting the one it replaces, so their shared tiles stay.
+  const replaced = listAreas().filter(
+    (a) => a.mapMaxZoom === area.mapMaxZoom && (Object.keys(area.bounds) as (keyof Bounds)[]).every((k) => a.bounds[k] === area.bounds[k]),
+  )
   saveAreas([...listAreas(), area])
+  for (const old of replaced) await deleteArea(old.id)
   return area
 }
