@@ -343,6 +343,36 @@ lowest   = lowest terrain within r_max     (coarse tiles: zoom with ~64 pixels a
 radius r = min(60 km, (h_start − lowest) · GR · 1.05 + 500 m)
 ```
 
+The radius depends on the lowest terrain the glider could reach, and where to look for that
+terrain depends on the radius. `r_max` breaks the cycle: it is a cheap upper bound on the
+glide distance, used **only to choose where to look for `lowest`**. It is never the size of
+the grid.
+
+- **`h_start · GR`**: the glider cannot fly farther than the height it can lose times the
+  glide ratio. As long as the ground is at or above sea level, the glider can lose at most
+  `h_start`, so no point beyond `h_start · GR` is reachable, and terrain out there cannot
+  matter. Terrain *inside* that circle can be anywhere from sea level up, which is why the
+  bound uses `h_start` and not `h_start − ground`.
+- **`max(…, 1000)`**: a floor, so a start below 1000 m AMSL still looks at least `1000 · GR`
+  around (5 km at GR 5).
+- **`min(60 km, …)`**: the overall cap on the search extent, the same as for the grid.
+
+`lowest` is the minimum over the tiles covering the square of half-side `r_max`. They are
+read at a coarse zoom, with pixels of about `r_max / 64` (for 11 km: zoom 10, ~105 m), so
+this costs a few tiles. Two approximations remain:
+
+- The swissALTI3D archive builds its coarse zooms with the maximum (§4.3), so in a narrow
+  valley `lowest` can read a little high. The grid then comes out slightly small, and
+  `truncated` reports it if the reachable area touches the border.
+- Ground below sea level breaks the bound. Only a few places have such ground (the Dead
+  Sea shore, at −430 m), and the 60 km cap applies anyway.
+
+The grid radius `r` then uses the height actually available, `h_start − lowest`. No path
+is shorter than a straight line, so nothing beyond `(h_start − lowest) · GR` is reachable.
+The margins (× 1.05, + 500 m) put the grid border beyond the farthest reachable cell, leaving
+room for `lowest` reading a little high. The code gives no finer reason for their exact
+values. As a result, `truncated` normally fires only when the 60 km cap cuts the area.
+
 **Route** grid, centered on the box of start, waypoints and landing ([route.ts:269](../src/lib/compute/route.ts#L269)):
 
 ```
@@ -365,6 +395,7 @@ The route grid has the smaller budget because it is searched ~6–10 times per p
 at ~558 m as the lowest terrain):
 
 ```
+r_max = min(60 000, max(2258.4, 1000) · 5) = 11 292 m   → lowest within it: ~558 m (Lake Thun)
 r = (2258.4 − 558) · 5 · 1.05 + 500 = 9 427 m
 s = max(10, 2 · 9 427 / 1 500)      = 12.57 m       → 1 501 × 1 501 ≈ 2.25 M cells
 pixel size at 46.6° N: zoom 12 = 26.3 m, zoom 13 = 13.1 m  → zoom 13 (the cap)
