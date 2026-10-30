@@ -8,6 +8,7 @@
   import type { Bounds, OfflineArea } from '../lib/offline/areas'
   import { BASEMAPS, initialStyle, type BasemapId } from '../lib/map/style'
   import { AWS_TERRARIUM, SWISS_ARCHIVE } from '../lib/terrain/loader'
+  import { t } from '../lib/i18n/index.svelte'
 
   export interface Overlay {
     url: string
@@ -290,7 +291,6 @@
         const el = document.createElement('div')
         el.className = 'waypoint-marker'
         el.textContent = `${i + 1}`
-        el.title = `Waypoint ${i + 1}: drag to move`
         marker = new Marker({ element: el, draggable: true }).setLngLat([p.lng, p.lat]).addTo(m)
         const dragged = marker
         dragged.on('dragend', () => {
@@ -301,6 +301,7 @@
       } else {
         marker.setLngLat([p.lng, p.lat])
       }
+      marker.getElement().title = t.map.waypointTitle(i + 1)
     })
   })
 
@@ -320,7 +321,7 @@
       el.type = 'button'
       el.className = r.selected ? 'route-badge selected' : 'route-badge'
       el.textContent = String.fromCharCode(65 + r.id)
-      el.setAttribute('aria-label', `Route ${el.textContent}`)
+      el.setAttribute('aria-label', t.map.route(el.textContent))
       el.addEventListener('click', (e) => {
         e.stopPropagation()
         onselectroute(r.id)
@@ -434,15 +435,12 @@
 <div class="map" bind:this={container}></div>
 {#if failed}
   <div class="map-failed" role="alert">
-    <strong>The map cannot be displayed</strong>
-    <p>
-      This browser could not start WebGL, which the map needs. Turn on hardware acceleration in the browser settings, or
-      try another browser.
-    </p>
+    <strong>{t.map.failedTitle}</strong>
+    <p>{t.map.failedText}</p>
   </div>
 {:else}
-  <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
-    Slopes &gt; 30°
+  <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title={t.map.slopesTitle}>
+    {t.map.slopes}
   </button>
   {#if hasOfflineAreas}
     <button
@@ -450,9 +448,9 @@
       class="layer-toggle offline-toggle"
       aria-pressed={showOfflineAreas}
       onclick={ontoggleofflineareas}
-      title="Outline the areas downloaded for offline use"
+      title={t.map.offlineAreasTitle}
     >
-      Offline areas
+      {t.map.offlineAreas}
     </button>
   {/if}
 {/if}

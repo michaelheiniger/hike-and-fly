@@ -12,6 +12,7 @@
   } from '../lib/offline/areas'
   import { AWS_TERRARIUM, SWISS_ARCHIVE, TileLoader } from '../lib/terrain/loader'
   import { preferences } from '../lib/settings.svelte'
+  import { count, date, num, t } from '../lib/i18n/index.svelte'
   import InfoTip from './InfoTip.svelte'
 
   interface Props {
@@ -37,7 +38,14 @@
   const plan = $derived(view ? planArea(view, preferences.offlineMapZoom) : null)
   const tileCount = $derived(plan ? plan.mapTiles.length + plan.elevationTiles.length : 0)
 
-  const mb = (bytes: number) => (bytes < 10e6 ? (bytes / 1e6).toFixed(1) : Math.round(bytes / 1e6).toString())
+  const mb = (bytes: number) => num(bytes / 1e6, bytes < 10e6 ? 1 : 0)
+  /** An area's name, by its center: 46.67° N, 8.07° E. */
+  function areaName(b: Bounds): string {
+    const lat = (b.north + b.south) / 2
+    const lng = (b.east + b.west) / 2
+    const o = t.offline
+    return `${num(Math.abs(lat), 2)}° ${lat >= 0 ? o.north : o.south}, ${num(Math.abs(lng), 2)}° ${lng >= 0 ? o.east : o.west}`
+  }
 
   async function refreshStorage() {
     const estimate = await navigator.storage?.estimate?.().catch(() => null)
@@ -56,10 +64,10 @@
       const reused = progress?.reused ?? 0
       areas = listAreas()
       message = area.complete
-        ? `Saved: ${area.tiles} tiles, ${mb(area.bytes)} MB${reused ? ` (${reused} already stored for other areas)` : ''}.`
-        : `Saved with gaps: ${progress?.failed} tiles could not be downloaded.`
+        ? t.offline.saved(count(area.tiles), mb(area.bytes), reused)
+        : t.offline.savedWithGaps(progress?.failed ?? 0)
     } catch (err) {
-      message = err instanceof DOMException && err.name === 'AbortError' ? 'Download cancelled.' : `Download failed: ${err}`
+      message = err instanceof DOMException && err.name === 'AbortError' ? t.offline.cancelled : t.offline.failed(String(err))
     } finally {
       progress = null
       controller = null
@@ -73,28 +81,22 @@
     void refreshStorage()
   }
 
-  const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 </script>
 
 <section>
   <div class="head">
     <h2>
-      Offline
-      <InfoTip topic="offline maps">
-        Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without network
-        in the mountains. OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the
-        swisstopo map.
-      </InfoTip>
+      {t.offline.title}
+      <InfoTip topic={t.topics.offline}>{t.offline.tip}</InfoTip>
     </h2>
-    <span class="status" class:offline={!online}><i aria-hidden="true"></i>{online ? 'Online' : 'Offline'}</span>
+    <span class="status" class:offline={!online}><i aria-hidden="true"></i>{online ? t.offline.online : t.offline.offline}</span>
   </div>
   <label class="field">
-    <span class="label">Map detail</span>
+    <span class="label">{t.offline.mapDetail}</span>
     <select bind:value={preferences.offlineMapZoom} disabled={!!progress}>
-      <option value={13}>Overview (zoom 13)</option>
-      <option value={14}>Standard (zoom 14)</option>
-      <option value={15}>Detailed (zoom 15)</option>
-      <option value={16}>Most detail (zoom 16)</option>
+      {#each [13, 14, 15, 16] as zoom (zoom)}
+        <option value={zoom}>{t.offline.detailOption(t.offline.detail[zoom], zoom)}</option>
+      {/each}
     </select>
   </label>
 
@@ -103,20 +105,20 @@
       <div class="bar" style:width="{(100 * progress.done) / Math.max(1, progress.total)}%"></div>
     </div>
     <div class="row">
-      <span class="muted">{progress.done} / {progress.total} tiles · {mb(progress.bytes)} MB</span>
-      <button type="button" onclick={() => controller?.abort()}>Cancel</button>
+      <span class="muted">{t.offline.progress(count(progress.done), count(progress.total), mb(progress.bytes))}</span>
+      <button type="button" onclick={() => controller?.abort()}>{t.offline.cancel}</button>
     </div>
   {:else if plan}
     <div class="row">
-      <span class="muted">{tileCount.toLocaleString()} tiles · about {mb(estimateBytes(plan))} MB</span>
+      <span class="muted">{t.offline.estimate(count(tileCount), mb(estimateBytes(plan)))}</span>
       <button type="button" class="primary" onclick={download} disabled={!online || tileCount > MAX_TILES}>
-        Download this area
+        {t.offline.download}
       </button>
     </div>
     {#if tileCount > MAX_TILES}
-      <p class="explain warning">Too large: zoom the map in or choose less map detail.</p>
+      <p class="explain warning">{t.offline.tooLarge}</p>
     {:else if !online}
-      <p class="explain">Connect to download.</p>
+      <p class="explain">{t.offline.connect}</p>
     {/if}
   {/if}
 
@@ -125,20 +127,20 @@
   {/if}
 
   {#if areas.length}
-    <h3>Saved areas</h3>
+    <h3>{t.offline.savedAreas}</h3>
     <ul class="areas">
       {#each areas as area (area.id)}
         <li>
           <div>
-            <strong>{area.name}</strong>
+            <strong>{areaName(area.bounds)}</strong>
             <span class="muted">
-              {date(area.created)} · {mb(area.bytes)} MB · map to zoom {area.mapMaxZoom}{area.complete ? '' : ' · has gaps'}
+              {t.offline.areaFacts(date(area.created), mb(area.bytes), area.mapMaxZoom, !area.complete)}
             </span>
           </div>
           <div class="actions">
-            <button type="button" class="link" onclick={() => onshow(area.bounds)}>Show</button>
+            <button type="button" class="link" onclick={() => onshow(area.bounds)}>{t.offline.show}</button>
             <!-- A download may be reusing this area's tiles. -->
-            <button type="button" class="link" onclick={() => remove(area)} disabled={!!progress}>Delete</button>
+            <button type="button" class="link" onclick={() => remove(area)} disabled={!!progress}>{t.offline.delete}</button>
           </div>
         </li>
       {/each}
@@ -146,7 +148,7 @@
   {/if}
 
   {#if storage}
-    <p class="explain">Storage used: {mb(storage.usage)} MB of {mb(storage.quota)} MB available to this app.</p>
+    <p class="explain">{t.offline.storage(mb(storage.usage), mb(storage.quota))}</p>
   {/if}
 </section>
 

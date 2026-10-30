@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areaName, estimateBytes, planArea } from './areas'
+import { estimateBytes, planArea } from './areas'
 
 // About 20 × 15 km around Grindelwald.
 const bounds = { west: 7.95, south: 46.6, east: 8.2, north: 46.74 }
@@ -29,11 +29,5 @@ describe('planArea', () => {
 
   it('estimates a size that grows with map detail', () => {
     expect(estimateBytes(planArea(bounds, 15))).toBeGreaterThan(estimateBytes(planArea(bounds, 14)))
-  })
-})
-
-describe('areaName', () => {
-  it('names an area by its center', () => {
-    expect(areaName(bounds)).toBe('46.67° N, 8.07° E')
   })
 })

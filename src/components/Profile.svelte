@@ -2,6 +2,7 @@
   import { untrack } from 'svelte'
   import type { RouteOption } from '../lib/compute/route'
   import { altitudeAt, clearanceAt as rampedClearance } from '../lib/glide/geometry'
+  import { decimal, num, t } from '../lib/i18n/index.svelte'
   import type { AglBand } from '../lib/render/agl'
   import type { LngLat } from '../lib/terrain/geo'
 
@@ -133,9 +134,9 @@
   const zoneLabel = $derived.by(() => {
     if (zoneEnd <= runEnd) return null
     const band = visible(runEnd, zoneEnd)
-    return band.width >= 11 * 6 + 8 ? band.left + 4 : null
+    return band.width >= t.profile.launchZone.length * 6 + 8 ? band.left + 4 : null
   })
-  const runLabelRaised = $derived(runLabel !== null && zoneLabel !== null && zoneLabel < runLabel + 30)
+  const runLabelRaised = $derived(runLabel !== null && zoneLabel !== null && zoneLabel < runLabel + t.profile.run.length * 6 + 10)
 
   const legendGradient = $derived(`linear-gradient(to right, ${bands.map((b) => b.color).join(', ')})`)
   const clearanceLine = $derived(path(points.map((p) => [p.distance, p.terrain + clearanceAt(p.distance)])))
@@ -153,7 +154,8 @@
   const yTicks = $derived(ticks(yDomain[0], yDomain[1], 4))
   const xTicks = $derived(ticks(domain[0] / 1000, domain[1] / 1000, Math.max(3, Math.floor(plotW / 70))))
   /** Drops the float noise of tick steps such as 0.1. */
-  const km = (t: number) => Number(t.toPrecision(6))
+  const km = (t: number) => decimal(Number(t.toPrecision(6)))
+  const kmText = (m: number) => num(m / 1000, 1)
 
   let hoverIndex: number | null = $state(null)
   const hovered = $derived(hoverIndex === null ? null : points[hoverIndex])
@@ -259,12 +261,12 @@
 
 <figure class="profile">
   <figcaption>
-    <strong>Route {String.fromCharCode(65 + route.id)} · glide ratio {glideRatio.toFixed(1)}{isRequired ? ' (required)' : ''}</strong>
-    <span>{(route.length / 1000).toFixed(1)} km flown · arrive {Math.round(arrivalAgl)} m above the landing</span>
+    <strong>{t.profile.caption(String.fromCharCode(65 + route.id), num(glideRatio, 1), isRequired)}</strong>
+    <span>{t.profile.summary(kmText(route.length), Math.round(arrivalAgl))}</span>
     <span class="legend">
-      <span class="key"><i class="swatch glide" style:background={legendGradient}></i>Glide path (AGL colors)</span>
-      <span class="key"><i class="swatch clearance"></i>Clearance</span>
-      <span class="key"><i class="swatch terrain"></i>Terrain</span>
+      <span class="key"><i class="swatch glide" style:background={legendGradient}></i>{t.profile.glidePath}</span>
+      <span class="key"><i class="swatch clearance"></i>{t.profile.clearance}</span>
+      <span class="key"><i class="swatch terrain"></i>{t.profile.terrain}</span>
     </span>
   </figcaption>
 
@@ -284,7 +286,7 @@
     onpointerleave={leave}
     ondblclick={() => (view = null)}
   >
-    <svg {width} {height} role="img" aria-label="Altitude profile along the route">
+    <svg {width} {height} role="img" aria-label={t.profile.label}>
       <clipPath id={clipId}>
         <rect x={margin.left} y="0" width={plotW} height={margin.top + plotH} />
       </clipPath>
@@ -299,12 +301,12 @@
       <g clip-path="url(#{clipId})">
         {#if runEnd > 0}
           <rect class="zone run" x={x(0)} y={margin.top} width={x(runEnd) - x(0)} height={plotH}>
-            <title>Takeoff run: {Math.round(runEnd)} m on the ground before the liftoff</title>
+            <title>{t.profile.runTitle(Math.round(runEnd))}</title>
           </rect>
         {/if}
         {#if zoneEnd > runEnd}
           <rect class="zone launch" x={x(runEnd)} y={margin.top} width={x(zoneEnd) - x(runEnd)} height={plotH}>
-            <title>Launch zone: the clearance grows from 0 to {clearance} m over {launchZone} m after the liftoff</title>
+            <title>{t.profile.zoneTitle(clearance, launchZone)}</title>
           </rect>
         {/if}
         <path class="terrain-area" d={terrainArea} />
@@ -317,10 +319,10 @@
           <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
         {/if}
         {#if runLabel !== null}
-          <text class="zone-label" x={runLabel} y={margin.top + plotH - (runLabelRaised ? 19 : 5)}>Run</text>
+          <text class="zone-label" x={runLabel} y={margin.top + plotH - (runLabelRaised ? 19 : 5)}>{t.profile.run}</text>
         {/if}
         {#if zoneLabel !== null}
-          <text class="zone-label" x={zoneLabel} y={margin.top + plotH - 5}>Launch zone</text>
+          <text class="zone-label" x={zoneLabel} y={margin.top + plotH - 5}>{t.profile.launchZone}</text>
         {/if}
         <path class="clearance" d={clearanceLine} />
         <path class="glide-casing" d={glideLine} />
@@ -337,7 +339,7 @@
         <!-- Where the glide leaves the ground, after the takeoff run. -->
         {#if runEnd > 0}
           <circle class="liftoff" cx={x(runEnd)} cy={y(route.liftoff.altitude)} r="3.5">
-            <title>Liftoff, {Math.round(runEnd)} m from the start</title>
+            <title>{t.profile.liftoff(Math.round(runEnd))}</title>
           </circle>
         {/if}
 
@@ -353,15 +355,15 @@
 
     {#if hovered}
       <div class="tooltip" style:left="{Math.min(x(hovered.distance) + 10, width - 210)}px">
-        <strong>{Math.round(hovered.altitude - hovered.terrain)} m AGL</strong>
-        <span>{Math.round(hovered.altitude)} m AMSL · terrain {Math.round(hovered.terrain)} m</span>
-        <span>{(hovered.distance / 1000).toFixed(span < 5000 ? 2 : 1)} km flown</span>
+        <strong>{Math.round(hovered.altitude - hovered.terrain)} m {t.agl}</strong>
+        <span>{t.profile.terrainAt(Math.round(hovered.altitude), Math.round(hovered.terrain))}</span>
+        <span>{t.app.kmFlown(num(hovered.distance / 1000, span < 5000 ? 2 : 1))}</span>
       </div>
     {/if}
 
     {#if view}
       <button type="button" class="reset" onpointerdown={(e) => e.stopPropagation()} onclick={() => (view = null)}>
-        Reset zoom
+        {t.profile.resetZoom}
       </button>
     {/if}
   </div>

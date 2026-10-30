@@ -17,7 +17,6 @@ export interface Bounds {
  */
 export interface OfflineArea {
   id: string
-  name: string
   bounds: Bounds
   /** Finest map zoom stored. */
   mapMaxZoom: number
@@ -135,12 +134,6 @@ export async function deleteArea(id: string): Promise<void> {
   await caches.delete(AREA_CACHE_PREFIX + id)
 }
 
-export function areaName(b: Bounds): string {
-  const lat = (b.north + b.south) / 2
-  const lng = (b.east + b.west) / 2
-  return `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lng).toFixed(2)}° ${lng >= 0 ? 'E' : 'W'}`
-}
-
 // --- Download --------------------------------------------------------------------
 
 export interface DownloadProgress {
@@ -232,7 +225,6 @@ export async function downloadArea(
   await cache.put(areaManifestUrl(id), Response.json(stored))
   const area: OfflineArea = {
     id,
-    name: areaName(plan.bounds),
     bounds: plan.bounds,
     mapMaxZoom: plan.mapMaxZoom,
     tiles: progress.done - progress.failed,

@@ -187,6 +187,74 @@ export const en = {
     launchZone: 'Launch zone',
     note: 'Start (dark), liftoff after the run (white), glide path (solid) and required clearance (dashed). Distances to scale, heights not.',
   },
+
+  offline: {
+    title: 'Offline',
+    tip: 'Download the area shown on the map: swisstopo map, slope classes and elevation, so planning works without network in the mountains. OpenTopoMap cannot be downloaded (its usage policy forbids bulk downloads): offline, use the swisstopo map.',
+    online: 'Online',
+    offline: 'Offline',
+    mapDetail: 'Map detail',
+    detail: { 13: 'Overview', 14: 'Standard', 15: 'Detailed', 16: 'Most detail' } as Record<number, string>,
+    detailOption: (name: string, zoom: number) => `${name} (zoom ${zoom})`,
+    progress: (done: string, total: string, mb: string) => `${done} / ${total} tiles · ${mb} MB`,
+    cancel: 'Cancel',
+    estimate: (tiles: string, mb: string) => `${tiles} tiles · about ${mb} MB`,
+    download: 'Download this area',
+    tooLarge: 'Too large: zoom the map in or choose less map detail.',
+    connect: 'Connect to download.',
+    saved: (tiles: string, mb: string, reused: number) =>
+      `Saved: ${tiles} tiles, ${mb} MB${reused ? ` (${reused} already stored for other areas)` : ''}.`,
+    savedWithGaps: (failed: number) => `Saved with gaps: ${failed} tiles could not be downloaded.`,
+    cancelled: 'Download cancelled.',
+    failed: (error: string) => `Download failed: ${error}`,
+    savedAreas: 'Saved areas',
+    areaFacts: (date: string, mb: string, zoom: number, gaps: boolean) =>
+      `${date} · ${mb} MB · map to zoom ${zoom}${gaps ? ' · has gaps' : ''}`,
+    show: 'Show',
+    delete: 'Delete',
+    storage: (used: string, quota: string) => `Storage used: ${used} MB of ${quota} MB available to this app.`,
+    /** Hemispheres, for an area's name by its center: 46.67° N, 8.07° E. */
+    north: 'N',
+    south: 'S',
+    east: 'E',
+    west: 'W',
+  },
+
+  map: {
+    failedTitle: 'The map cannot be displayed',
+    failedText:
+      'This browser could not start WebGL, which the map needs. Turn on hardware acceleration in the browser settings, or try another browser.',
+    slopes: 'Slopes > 30°',
+    slopesTitle: 'swisstopo slope classes over 30°',
+    offlineAreas: 'Offline areas',
+    offlineAreasTitle: 'Outline the areas downloaded for offline use',
+    waypointTitle: (n: number) => `Waypoint ${n}: drag to move`,
+    route: (letter: string) => `Route ${letter}`,
+  },
+
+  legend: {
+    title: 'Height above ground',
+    finalGlide: 'final glide only',
+    launchZone: (zone: number) => `Launch zone (first ${zone} m after the liftoff): not colored`,
+  },
+
+  profile: {
+    caption: (letter: string, ratio: string, required: boolean) =>
+      `Route ${letter} · glide ratio ${ratio}${required ? ' (required)' : ''}`,
+    summary: (km: string, arrival: number) => `${km} km flown · arrive ${arrival} m above the landing`,
+    glidePath: 'Glide path (AGL colors)',
+    clearance: 'Clearance',
+    terrain: 'Terrain',
+    label: 'Altitude profile along the route',
+    runTitle: (meters: number) => `Takeoff run: ${meters} m on the ground before the liftoff`,
+    zoneTitle: (clearance: number, zone: number) =>
+      `Launch zone: the clearance grows from 0 to ${clearance} m over ${zone} m after the liftoff`,
+    run: 'Run',
+    launchZone: 'Launch zone',
+    liftoff: (meters: number) => `Liftoff, ${meters} m from the start`,
+    terrainAt: (altitude: number, terrain: number) => `${altitude} m AMSL · terrain ${terrain} m`,
+    resetZoom: 'Reset zoom',
+  },
 }
 
 export type Messages = typeof en

@@ -1,23 +1,27 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.svelte'
   import type { AglBand } from '../lib/render/agl'
 
   /** `open`: unfolded at first. */
   let { bands, launchZone, open = true }: { bands: AglBand[]; launchZone: number; open?: boolean } = $props()
+
+  const label = (b: AglBand) =>
+    (b.to === Infinity ? `> ${b.from} m` : `${b.from}–${b.to} m`) + (b.finalGlide ? ` · ${t.legend.finalGlide}` : '')
 </script>
 
 <details {open}>
-  <summary>Height above ground</summary>
+  <summary>{t.legend.title}</summary>
   <ul>
     {#each [...bands].reverse() as band (band.from)}
       <li>
         <span class="swatch" style:background={band.color}></span>
-        <span>{band.label}</span>
+        <span>{label(band)}</span>
       </li>
     {/each}
     {#if launchZone > 0}
       <li>
         <span class="swatch launch"></span>
-        <span>Launch zone (first {launchZone} m): not colored</span>
+        <span>{t.legend.launchZone(launchZone)}</span>
       </li>
     {/if}
   </ul>

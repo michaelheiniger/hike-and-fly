@@ -50,3 +50,7 @@ export const ratio = (gr: number) => num(Math.ceil(gr * 10 - 1e-9) / 10, 1)
 
 /** Meters as kilometers with one decimal (4.2). */
 export const km = (meters: number) => num(meters / 1000, 1)
+
+/** A number with as many decimals as it needs, up to three (0.5, 2, 1.25). */
+export const decimal = (value: number) =>
+  value.toLocaleString(LOCALES[preferences.language], { maximumFractionDigits: 3, useGrouping: false })

@@ -7,7 +7,8 @@ export interface AglBand {
   /** Upper bound (exclusive), Infinity for the last band. */
   to: number
   color: string
-  label: string
+  /** Below the clearance: reachable as a final glide only. */
+  finalGlide?: boolean
 }
 
 export type ColorScheme = 'standard' | 'colorblind'
@@ -42,7 +43,7 @@ export function aglBands(clearance: number, scheme: ColorScheme = 'standard'): A
   const { belowClearance, ramp } = PALETTES[scheme]
   const bands: AglBand[] = []
   if (clearance > 0) {
-    bands.push({ from: 0, to: clearance, color: belowClearance, label: `0–${clearance} m · final glide only` })
+    bands.push({ from: 0, to: clearance, color: belowClearance, finalGlide: true })
   }
   const bounds = [clearance, ...LEVELS.filter((l) => l > clearance), Infinity]
   for (let i = 0; i < bounds.length - 1; i++) {
@@ -52,7 +53,6 @@ export function aglBands(clearance: number, scheme: ColorScheme = 'standard'): A
       from,
       to,
       color: ramp[Math.min(i, ramp.length - 1)],
-      label: to === Infinity ? `> ${from} m` : `${from}–${to} m`,
     })
   }
   return bands
