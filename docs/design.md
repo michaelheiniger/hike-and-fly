@@ -7,6 +7,10 @@ around mountains, never through them).
 
 Scope: Switzerland first, worldwide later. Ultimately usable offline in the mountains.
 
+For a step-by-step explanation with diagrams and ways to verify each step, see
+[`methodology.md`](methodology.md); for the reasons behind the main choices, the
+[architecture decision records](adr/README.md).
+
 ## 1. Core algorithm
 
 ### Reachable area and AGL
