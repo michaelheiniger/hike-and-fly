@@ -55,6 +55,8 @@
     onmovelanding: (p: LngLat) => void
     onmovewaypoint: (index: number, p: LngLat) => void
     onhover: (p: LngLat | null) => void
+    /** Shown next to the mouse pointer while it is over the map, e.g. the elevation there. */
+    pointerLabel: string | null
   }
 
   let {
@@ -80,7 +82,11 @@
     onmovelanding,
     onmovewaypoint,
     onhover,
+    pointerLabel,
   }: Props = $props()
+
+  /** Mouse position over the map (px from its top-left corner); null when elsewhere. */
+  let pointer = $state<{ x: number; y: number } | null>(null)
 
   let container: HTMLDivElement
   let map: Map | undefined = $state()
@@ -256,8 +262,14 @@
       if (hit) onselectroute(hit.properties.id as number)
       else onpick({ lng: e.lngLat.lng, lat: e.lngLat.lat })
     })
-    m.on('mousemove', (e) => onhover({ lng: e.lngLat.lng, lat: e.lngLat.lat }))
-    m.on('mouseout', () => onhover(null))
+    m.on('mousemove', (e) => {
+      pointer = { x: e.point.x, y: e.point.y }
+      onhover({ lng: e.lngLat.lng, lat: e.lngLat.lat })
+    })
+    m.on('mouseout', () => {
+      pointer = null
+      onhover(null)
+    })
     const reportView = () => {
       const b = m.getBounds()
       onviewchange({ west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() })
@@ -459,6 +471,9 @@
 </script>
 
 <div class="map" bind:this={container}></div>
+{#if pointer && pointerLabel}
+  <div class="pointer-label" style:left="{pointer.x + 14}px" style:top="{pointer.y + 14}px">{pointerLabel}</div>
+{/if}
 {#if failed}
   <div class="map-failed" role="alert">
     <strong>{t.map.failedTitle}</strong>
@@ -518,6 +533,20 @@
   .map {
     position: absolute;
     inset: 0;
+  }
+
+  /* Next to the pointer, never in its way. */
+  .pointer-label {
+    position: absolute;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   .map-failed {

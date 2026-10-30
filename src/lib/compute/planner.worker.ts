@@ -47,7 +47,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const info = await ready
     if (message.kind === 'reach') {
       const result = await computeReach(message.request, loadTiles, options)
-      const transfer = [result.agl.buffer, result.distance.buffer, ...(result.glideStart ? [result.glideStart.buffer] : [])]
+      const transfer = [
+        result.agl.buffer,
+        result.distance.buffer,
+        result.elevation.buffer,
+        ...(result.glideStart ? [result.glideStart.buffer] : []),
+      ]
       post({ id, kind: 'reach', type: 'result', result, elevationSource: info.description }, transfer)
     } else if (message.kind === 'route') {
       post({ id, kind: 'route', type: 'result', result: await planner.plan(message.request) })

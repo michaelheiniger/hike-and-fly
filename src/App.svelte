@@ -201,6 +201,13 @@
             : t.app.searchingAlternatives,
   )
 
+  /** Ground elevation under the cursor, from the reachable area's terrain; null outside it. */
+  const hoverElevation = $derived.by(() => {
+    if (!hover || !reach || !settings.start) return null
+    const cell = cellAt(reach.grid, hover)
+    return cell ? Math.round(reach.elevation[cell.row * reach.grid.cols + cell.col]) : null
+  })
+
   /** Readout under the cursor: AGL, altitude and distance flown. */
   const readout = $derived.by(() => {
     if (!hover || !reach || !reachRequest) return null
@@ -334,6 +341,7 @@
     onmovelanding={(p) => (settings.landing = p)}
     onmovewaypoint={(i, p) => (settings.waypoints = settings.waypoints.map((w, j) => (j === i ? p : w)))}
     onhover={(p) => (hover = p)}
+    pointerLabel={hoverElevation === null ? null : `${hoverElevation} m`}
   />
 
   <aside
