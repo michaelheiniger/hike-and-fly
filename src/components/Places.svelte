@@ -2,6 +2,7 @@
   import type { ReachResult } from '../lib/compute/reach'
   import type { RouteResult } from '../lib/compute/route'
   import { formatRatio } from '../lib/glide/required'
+  import { km, num, ratio, t } from '../lib/i18n/index.svelte'
   import { settings } from '../lib/settings.svelte'
 
   interface Props {
@@ -27,8 +28,8 @@
   }
 
   const coords = (p: { lat: number; lng: number }) => `${p.lat.toFixed(4)}°, ${p.lng.toFixed(4)}°`
-  const km = (m: number) => `${(m / 1000).toFixed(1)} km`
-  const along = (d: number) => (d < 1000 ? `${Math.round(d / 10) * 10} m` : km(d))
+  const along = (d: number) => (d < 1000 ? `${Math.round(d / 10) * 10} m` : `${km(d)} km`)
+  const seconds = (ms: number) => num(ms / 1000, 1)
 
   /** Height of the start above its ground, when not a ground launch. */
   const aboveGround = $derived(reach ? Math.round(reach.startAltitude - reach.startElevation) : 0)
@@ -44,10 +45,10 @@
   const terrainNote = $derived.by(() => {
     if (!route || straightRatio === null) return null
     const { glideRatio, limit } = route.straightLine
-    const where = limit ? `${along(limit.distance)} out (${Math.round(limit.elevation)} m)` : ''
-    if (glideRatio === Infinity) return `Terrain blocks the straight line ${where}.`
+    const where = limit ? t.places.where(along(limit.distance), Math.round(limit.elevation)) : ''
+    if (glideRatio === Infinity) return t.places.terrainBlocks(where)
     if (limit && Number(formatRatio(glideRatio)) > Number(formatRatio(straightRatio)))
-      return `Terrain raises the straight line to ${formatRatio(glideRatio)}: ground ${where}.`
+      return t.places.terrainRaises(ratio(glideRatio), where)
     return null
   })
 </script>
@@ -69,28 +70,28 @@
 {#if settings.start}
   <section>
     <div class="places">
-      <span class="place" title="Start: {coords(settings.start)}">
+      <span class="place" title="{t.places.start}: {coords(settings.start)}">
         {@render pin('#1a1a19')}
-        <span class="visually-hidden">Start</span>
+        <span class="visually-hidden">{t.places.start}</span>
         {#if reach && aboveGround}
-          <span title="Start altitude, {aboveGround} m above the ground ({Math.round(reach.startElevation)} m)">
-            {@render icon('altitude', 'Start altitude')}{Math.round(reach.startAltitude)} m
+          <span title={t.places.startAltitudeTitle(aboveGround, Math.round(reach.startElevation))}>
+            {@render icon('altitude', t.places.startAltitude)}{Math.round(reach.startAltitude)} m
           </span>
         {:else if reach}
-          <span title="Ground at the start">{@render icon('ground', 'Ground')}{Math.round(reach.startElevation)} m</span>
+          <span title={t.places.groundAtStart}>{@render icon('ground', t.places.ground)}{Math.round(reach.startElevation)} m</span>
         {/if}
       </span>
 
       {#if settings.landing}
-        {@render icon('to', 'to')}
-        <span class="place" title="Landing: {coords(settings.landing)}">
+        {@render icon('to', t.places.to)}
+        <span class="place" title="{t.places.landing}: {coords(settings.landing)}">
           {@render pin('#2a78d6')}
-          <span class="visually-hidden">Landing</span>
+          <span class="visually-hidden">{t.places.landing}</span>
           {#if route}
-            <span title="Ground at the landing">{@render icon('ground', 'Ground')}{Math.round(route.landingElevation)} m</span>
+            <span title={t.places.groundAtLanding}>{@render icon('ground', t.places.ground)}{Math.round(route.landingElevation)} m</span>
           {/if}
         </span>
-        <button type="button" class="remove" aria-label="Remove the landing" title="Remove the landing" onclick={onclearlanding}>
+        <button type="button" class="remove" aria-label={t.places.removeLanding} title={t.places.removeLanding} onclick={onclearlanding}>
           ✕
         </button>
       {/if}
@@ -99,13 +100,13 @@
     {#if settings.landing}
       {#if route}
         <div class="facts">
-          <span title="From the start altitude down to the landing">
-            {@render icon('height', 'Height difference')}{Math.round(route.startAltitude - route.landingElevation)} m
+          <span title={t.places.heightDifferenceTitle}>
+            {@render icon('height', t.places.heightDifference)}{Math.round(route.startAltitude - route.landingElevation)} m
           </span>
-          <span title="Straight distance">{@render icon('distance', 'Distance')}{km(route.straightDistance)}</span>
+          <span title={t.places.straightDistance}>{@render icon('distance', t.places.distance)}{km(route.straightDistance)} km</span>
           {#if straightRatio !== null}
-            <span title="Glide ratio along the straight line, ignoring terrain: distance over height, with {arrivalHeight} m above the landing">
-              {@render icon('straight', 'Straight line needs')}{formatRatio(straightRatio)}
+            <span title={t.places.straightRatioTitle(arrivalHeight)}>
+              {@render icon('straight', t.places.straightRatio)}{ratio(straightRatio)}
             </span>
           {/if}
         </div>
@@ -115,26 +116,22 @@
 
     <div class="status" aria-live="polite">
       {#if reachComputing}
-        <span class="muted">Computing…</span>
+        <span class="muted">{t.places.computing}</span>
       {:else if reachError}
         <span class="error">⚠ {reachError}</span>
       {:else if reach && reach.reachableCells <= 1}
-        <span class="warning">
-          ⚠ No glide possible from here: the ground within the takeoff run ({settings.takeoffRun} m) is not steeper than
-          the glide path. Pick a steeper slope, a longer takeoff run, or add start height.
-        </span>
+        <span class="warning">⚠ {t.places.noGlide(settings.takeoffRun)}</span>
       {:else if reach && reach.beyondLaunchZone === 0}
-        <span class="warning">
-          ⚠ Nothing is reachable beyond the launch zone (first {settings.launchZone} m, left uncolored): the ground below
-          the start is barely steeper than the glide path. Pick a steeper slope or add start height.
-        </span>
+        <span class="warning">⚠ {t.places.onlyLaunchZone(settings.launchZone)}</span>
       {:else if reach?.truncated}
-        <span class="warning">⚠ The reachable area reaches the edge of the search area and may be cut off.</span>
+        <span class="warning">⚠ {t.places.truncated}</span>
       {:else if reach}
         <span class="muted">
-          Computed in {((reach.timings.terrain + reach.timings.search) / 1000).toFixed(1)} s (terrain {(
-            reach.timings.terrain / 1000
-          ).toFixed(1)} s, search {(reach.timings.search / 1000).toFixed(1)} s)
+          {t.places.computedIn(
+            seconds(reach.timings.terrain + reach.timings.search),
+            seconds(reach.timings.terrain),
+            seconds(reach.timings.search),
+          )}
         </span>
       {/if}
     </div>

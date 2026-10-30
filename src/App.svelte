@@ -12,6 +12,7 @@
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import { flownSinceLiftoff } from './lib/glide/search'
+  import { km, t } from './lib/i18n/index.svelte'
   import { groundLaunch } from './lib/compute/terrain'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import { aglBands, renderAgl } from './lib/render/agl'
@@ -188,12 +189,12 @@
     !busy.reach && !busy.route && !busy.alternatives
       ? null
       : busy.loading
-        ? 'Loading elevation data…'
+        ? t.app.loadingElevation
         : busy.reach
-          ? 'Computing reachable area…'
+          ? t.app.computingReach
           : busy.route
-            ? 'Computing routes…'
-            : 'Looking for alternative routes…',
+            ? t.app.computingRoutes
+            : t.app.searchingAlternatives,
   )
 
   /** Readout under the cursor: AGL, altitude and distance flown. */
@@ -344,7 +345,7 @@
         class="handle"
         role="separator"
         aria-orientation="horizontal"
-        aria-label="Resize panel (double-click to fit the content)"
+        aria-label={t.app.resizePanel}
         tabindex="0"
         onpointerdown={dragPanel}
         ondblclick={() => (panelSize = null)}
@@ -354,13 +355,13 @@
     <header>
       <h1 class="visually-hidden">Hike &amp; Fly Planner</h1>
       <div class="header-row">
-        {#if !online}<span class="offline-badge">Offline</span>{/if}
-        <span class="hint">{settings.start ? 'Click on the map sets' : 'Click the map to set the start.'}</span>
+        {#if !online}<span class="offline-badge">{t.app.offline}</span>{/if}
+        <span class="hint">{settings.start ? t.app.clickSets : t.app.clickToStart}</span>
         <button
           type="button"
           class="settings-button"
-          aria-label="Settings"
-          title="Settings: map, offline, assumptions"
+          aria-label={t.app.settings}
+          title={t.app.settingsTitle}
           onclick={() => planPanel.openSettings()}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -372,10 +373,10 @@
         </button>
       </div>
       {#if settings.start}
-        <span class="segmented" role="group" aria-label="Click on the map sets">
-          <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>Start</button>
-          <button type="button" aria-pressed={clickSets === 'waypoint'} onclick={() => (clickSets = 'waypoint')}>Waypoint</button>
-          <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>Landing</button>
+        <span class="segmented" role="group" aria-label={t.app.clickSets}>
+          <button type="button" aria-pressed={clickSets === 'start'} onclick={() => (clickSets = 'start')}>{t.app.start}</button>
+          <button type="button" aria-pressed={clickSets === 'waypoint'} onclick={() => (clickSets = 'waypoint')}>{t.app.waypoint}</button>
+          <button type="button" aria-pressed={clickSets === 'landing'} onclick={() => (clickSets = 'landing')}>{t.app.landing}</button>
         </span>
       {/if}
     </header>
@@ -422,7 +423,7 @@
             {@render profile('profile-inline')}
           {/if}
         {:else if settings.start}
-          <p class="hint">Click the map to set a landing and get the required glide ratio.</p>
+          <p class="hint">{t.app.clickToLand}</p>
         {/if}
       {/snippet}
       {#snippet footer()}
@@ -441,8 +442,8 @@
     </AssumptionsPanel>
 
     <section class="report">
-      <button type="button" class="link" onclick={() => reportDialog.open()}>Report an issue</button>
-      <span class="hint">With this plan and its results attached, so the problem can be reproduced.</span>
+      <button type="button" class="link" onclick={() => reportDialog.open()}>{t.app.reportIssue}</button>
+      <span class="hint">{t.app.reportHint}</span>
     </section>
   </aside>
 
@@ -469,13 +470,13 @@
   {#if readout && !shownRoute}
     <div class="readout" role="status">
       {#if readout.reachable && readout.launchZone}
-        <span>Launch zone</span>
+        <span>{t.app.launchZone}</span>
       {:else if readout.reachable}
-        <strong>{Math.round(readout.agl)} m AGL</strong>
-        <span>{Math.round(readout.altitude)} m AMSL</span>
-        <span>{(readout.distance / 1000).toFixed(1)} km flown</span>
+        <strong>{Math.round(readout.agl)} m {t.agl}</strong>
+        <span>{Math.round(readout.altitude)} m {t.amsl}</span>
+        <span>{t.app.kmFlown(km(readout.distance))}</span>
       {:else}
-        <span>Not reachable</span>
+        <span>{t.app.notReachable}</span>
       {/if}
     </div>
   {/if}

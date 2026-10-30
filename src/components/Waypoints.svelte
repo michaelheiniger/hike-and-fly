@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n/index.svelte'
   import type { LngLat } from '../lib/terrain/geo'
 
   interface Props {
@@ -12,16 +13,18 @@
 
 <section>
   <div class="head">
-    <h2>Waypoints</h2>
-    <button type="button" class="link" onclick={onclear}>Remove all</button>
+    <h2>{t.waypoints.title}</h2>
+    <button type="button" class="link" onclick={onclear}>{t.waypoints.removeAll}</button>
   </div>
-  <p class="muted">Flown over in order, with the clearance, on the way to the landing.</p>
+  <p class="muted">{t.waypoints.explain}</p>
   <ol>
     {#each waypoints as w, i (i)}
       <li>
         <span class="number" aria-hidden="true">{i + 1}</span>
         <span class="value">{w.lat.toFixed(4)}°, {w.lng.toFixed(4)}°</span>
-        <button type="button" class="link" aria-label="Remove waypoint {i + 1}" onclick={() => onremove(i)}>Remove</button>
+        <button type="button" class="link" aria-label={t.waypoints.removeOne(i + 1)} onclick={() => onremove(i)}>
+          {t.waypoints.remove}
+        </button>
       </li>
     {/each}
   </ol>

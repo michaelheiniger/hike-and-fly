@@ -44,3 +44,9 @@ export const count = (value: number) => value.toLocaleString(LOCALES[preferences
 /** A date such as 30 Oct 2026. */
 export const date = (iso: string) =>
   new Date(iso).toLocaleDateString(LOCALES[preferences.language], { day: 'numeric', month: 'short', year: 'numeric' })
+
+/** A glide ratio rounded up to a tenth, the conservative side (5.3). */
+export const ratio = (gr: number) => num(Math.ceil(gr * 10 - 1e-9) / 10, 1)
+
+/** Meters as kilometers with one decimal (4.2). */
+export const km = (meters: number) => num(meters / 1000, 1)
