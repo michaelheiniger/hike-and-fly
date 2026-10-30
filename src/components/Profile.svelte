@@ -119,6 +119,16 @@
     return runs.map((r) => ({ color: r.color, d: path(r.points) }))
   })
 
+  /** The takeoff run (on the ground, to the liftoff), then the launch zone where the clearance ramps up. */
+  const runEnd = $derived(route.liftoff.distance)
+  const zoneEnd = $derived(Math.min(length, runEnd + launchZone))
+  /** Visible part of a band, in pixels; its label is shown when wide enough. */
+  const visible = (from: number, to: number) => {
+    const left = Math.max(x(from), margin.left)
+    return { left, width: Math.min(x(to), margin.left + plotW) - left }
+  }
+  const labelFits = (from: number, to: number, chars: number) => visible(from, to).width >= chars * 6 + 8
+
   const legendGradient = $derived(`linear-gradient(to right, ${bands.map((b) => b.color).join(', ')})`)
   const clearanceLine = $derived(path(points.map((p) => [p.distance, p.terrain + clearanceAt(p.distance)])))
 
@@ -279,8 +289,26 @@
       {/each}
 
       <g clip-path="url(#{clipId})">
+        {#if runEnd > 0}
+          <rect class="zone run" x={x(0)} y={margin.top} width={x(runEnd) - x(0)} height={plotH}>
+            <title>Takeoff run: {Math.round(runEnd)} m on the ground before the liftoff</title>
+          </rect>
+        {/if}
+        {#if zoneEnd > runEnd}
+          <rect class="zone launch" x={x(runEnd)} y={margin.top} width={x(zoneEnd) - x(runEnd)} height={plotH}>
+            <title>Launch zone: the clearance grows from 0 to {clearance} m over {launchZone} m after the liftoff</title>
+          </rect>
+          <line class="zone-end" x1={x(zoneEnd)} x2={x(zoneEnd)} y1={margin.top} y2={margin.top + plotH} />
+        {/if}
         <path class="terrain-area" d={terrainArea} />
         <path class="terrain" d={terrainLine} />
+        <!-- Band labels at the bottom, over the terrain: the glide path starts at the top. -->
+        {#if runEnd > 0 && labelFits(0, runEnd, 3)}
+          <text class="zone-label" x={visible(0, runEnd).left + 4} y={margin.top + plotH - 5}>Run</text>
+        {/if}
+        {#if zoneEnd > runEnd && labelFits(runEnd, zoneEnd, 11)}
+          <text class="zone-label" x={visible(runEnd, zoneEnd).left + 4} y={margin.top + plotH - 5}>Launch zone</text>
+        {/if}
         <path class="clearance" d={clearanceLine} />
         <path class="glide-casing" d={glideLine} />
         {#each glideRuns as run, i (i)}
@@ -292,6 +320,13 @@
           <line class="waypoint" x1={x(w)} x2={x(w)} y1={margin.top} y2={margin.top + plotH} />
           <text class="waypoint-label" x={x(w) + 3} y={margin.top + 10}>{i + 1}</text>
         {/each}
+
+        <!-- Where the glide leaves the ground, after the takeoff run. -->
+        {#if runEnd > 0}
+          <circle class="liftoff" cx={x(runEnd)} cy={y(route.liftoff.altitude)} r="3.5">
+            <title>Liftoff, {Math.round(runEnd)} m from the start</title>
+          </circle>
+        {/if}
 
         <!-- Arrival height at the landing. -->
         <line class="reserve" x1={x(length) - 8} x2={x(length)} y1={y(landingElevation + arrivalHeight)} y2={y(landingElevation + arrivalHeight)} />
@@ -431,6 +466,36 @@
     stroke-width: 3;
     stroke-linejoin: round;
     stroke-linecap: round;
+  }
+
+  .zone {
+    fill: var(--text-muted);
+  }
+
+  .zone.run {
+    opacity: 0.16;
+  }
+
+  .zone.launch {
+    opacity: 0.07;
+  }
+
+  .zone-end {
+    stroke: var(--text-muted);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    opacity: 0.7;
+  }
+
+  .zone-label {
+    fill: var(--text-muted);
+    font-size: 11px;
+  }
+
+  .liftoff {
+    fill: var(--surface);
+    stroke: var(--text);
+    stroke-width: 2;
   }
 
   .waypoint {
