@@ -111,7 +111,7 @@
       return
     }
     m.addControl(new NavigationControl({ showCompass: false }), 'top-right')
-    m.addControl(new ScaleControl({ unit: 'metric' }), 'top-right')
+    m.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
     m.on('load', () => {
       // MapLibre opens the compact attribution at first; start folded to its (i) button.
       container.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
@@ -481,7 +481,8 @@
 
   .layer-toggle {
     position: absolute;
-    top: 110px;
+    /* Below the zoom buttons. */
+    top: 78px;
     right: 10px;
     padding: 4px 8px;
     font-size: 12px;
@@ -494,7 +495,7 @@
   }
 
   .offline-toggle {
-    top: 140px;
+    top: 108px;
   }
 
   .layer-toggle[aria-pressed='true'] {

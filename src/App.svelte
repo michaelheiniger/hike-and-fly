@@ -583,6 +583,11 @@
     color: var(--on-accent);
   }
 
+  /* The map scale, right of the panel (which can reach the bottom). */
+  main :global(.maplibregl-ctrl-bottom-left) {
+    left: 332px;
+  }
+
   .profile-card {
     position: absolute;
     left: 344px;
@@ -684,6 +689,10 @@
 
     .readout {
       display: none;
+    }
+
+    main :global(.maplibregl-ctrl-bottom-left) {
+      left: 0;
     }
 
     .legend {
