@@ -49,6 +49,12 @@
   })
   /** A narrow run is labelled from the start rather than centered on it. */
   const runWide = $derived(x(takeoffRun) - x(0) > t.diagram.run.length * 6 + 6)
+  /** The launch zone's label, centered on it but clear of a run label drawn from the start. */
+  const zoneLabelX = $derived.by(() => {
+    const center = (x(takeoffRun) + x(zoneEnd)) / 2
+    const runRight = takeoffRun > 0 && !runWide ? x(0) + t.diagram.run.length * 6.5 : -Infinity
+    return Math.max(center, runRight + 14 + (t.diagram.launchZone.length * 6.5) / 2)
+  })
 </script>
 
 <div bind:clientWidth={W}>
@@ -95,7 +101,7 @@
       </text>
     {/if}
     {#if launchZone > 0}
-      <text class="label" x={(x(takeoffRun) + x(zoneEnd)) / 2} y={H - 18} text-anchor="middle">{t.diagram.launchZone}</text>
+      <text class="label" x={zoneLabelX} y={H - 18} text-anchor="middle">{t.diagram.launchZone}</text>
     {/if}
     {#each ticks as d (d)}
       <text class="tick" x={x(d)} y={H - 4} text-anchor={d === 0 ? 'start' : 'middle'}>{d} m</text>
