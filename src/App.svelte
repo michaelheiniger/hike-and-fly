@@ -413,6 +413,7 @@
           {online}
           onshow={(b) => {
             planPanel.closeSettings()
+            preferences.showOfflineAreas = true
             fitTo = { ...b }
             basemap = 'swisstopo'
           }}
