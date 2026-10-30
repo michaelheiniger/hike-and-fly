@@ -23,7 +23,8 @@ path** to it. This makes the problem a constrained shortest-path search on a ter
 - Run Dijkstra from the start. A cell may be entered only if the glider would still be
   above the terrain plus the required clearance there:
   `h_start − d / GR ≥ terrain(cell) + clearance(d)`
-- Result: `d(x)`, the shortest flyable distance to every cell. From it:
+- Result: `d(x)`, the shortest flyable distance to every cell (*flyable* is defined in
+  [methodology §3.2](methodology.md#flyable-path)). From it:
   - `altitude(x) = h_start − d(x) / GR`
   - `AGL(x) = altitude(x) − terrain(x)` → the color-coded overlay
   - reachable area = cells with a finite `d(x)`

@@ -68,7 +68,7 @@ All lengths are meters, all altitudes are meters above mean sea level (AMSL) unl
 | `GR` | Glide ratio: meters flown forward per meter of height lost, in still air | 5 |
 | `h_start` | Start altitude AMSL (ground + start height when given AGL) | ground |
 | `z(x)` | Terrain elevation of grid cell `x` | — |
-| `d(x)` | Shortest *flyable* distance from the start to cell `x`, along the path | — |
+| `d(x)` | Shortest distance from the start to cell `x` along a *flyable* path ([definition](#flyable-path)) | — |
 | `a(x)` | Altitude over cell `x`: `h_start − d(x) / GR` | — |
 | `AGL(x)` | `a(x) − z(x)` | — |
 | `C` | Terrain clearance | 50 m |
@@ -117,6 +117,43 @@ the glide may go on from x ⇔  h_start − d / GR ≥ z(x) + c(d)         (abov
 A cell reached above the ground but below the clearance is a **final glide only**: you can
 land there, but you can't continue. One search gives the whole overlay, the reachable area and
 the best route to every cell.
+
+#### Flyable path
+
+A path is a sequence of cells `x₀, x₁, …, xₙ` where each step
+is one of the 16 grid moves (§6.2). `x₀` is the start, or a liftoff cell of the takeoff run
+(§3.5). Let:
+
+- `D_k` be the distance at `x_k`: the length of the moves up to `x_k`, plus, after a
+  liftoff, the starting distance `D₀ = (h_start − z(x₀) − 0.01) · GR` (`D₀ = 0` at the start);
+- `a_k = h_start − D_k / GR` be the altitude over `x_k`;
+- `c_k = c(D_k − D₀)` be the clearance at `x_k`, so the ramp counts from where the glide began.
+
+The path is **flyable** when all of these hold:
+
+| # | Condition | Applies to | Meaning |
+|---|---|---|---|
+| 1 | `a_k ≥ z(x_k)` | every cell `x₁ … xₙ` | never below the ground |
+| 2 | `a_k ≥ z(x_k) + c_k` | every cell the glide continues from: `x₁ … xₙ₋₁` | the clearance holds wherever the glider flies on |
+| 3 | `z(v) ≤ a_k − c_k` | the cells `v` crossed by the diagonal or knight move into `x_k` | cells flown over need the clearance too, checked at the lower arrival altitude `a_k` |
+| 4 | `x₀` within `R` of the start and `z(x₀) < h_start` | a liftoff `x₀` only, on a ground launch | the run goes downhill, at most `R` |
+
+The last cell `xₙ` needs only condition 1, which allows a final glide. Then:
+
+```
+d(x) = min { D_n : flyable paths ending at x }      (∞ when there is none)
+```
+
+Two points are deliberately *not* in this definition. The landing's arrival height is a
+condition on the route, not on the path (§3.6, §7). The straightened routes of §8 are
+straight segments rather than grid paths; they are checked against the same conditions 1–2
+on samples every half cell.
+
+The search of §6 computes this `d(x)` with one simplification: it keeps a single path per
+cell, the shortest. The clearance ramp restarts at each liftoff, so near the takeoff a
+*longer* path from a later liftoff can face less clearance than the shortest one, and could
+go on where the shortest cannot. The search may miss such a path. That can only make `d(x)`
+larger, never smaller, so the error is on the safe side and limited to the launch zone.
 
 ### 3.3 Terrain clearance `C = 50 m`
 
