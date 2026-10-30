@@ -34,8 +34,14 @@
   /** Height of the start above its ground, when not a ground launch. */
   const aboveGround = $derived(reach ? Math.round(reach.startAltitude - reach.startElevation) : 0)
 
-  /** Glide ratio for the straight line, ignoring terrain: distance over height. */
+  /** Glide ratio for the straight line, ignoring terrain: distance over the height down to the landing's ground. */
   const straightRatio = $derived.by(() => {
+    if (!route) return null
+    const height = route.startAltitude - route.landingElevation
+    return height > 0 ? route.straightDistance / height : null
+  })
+  /** The same with the arrival height, as the route search computes the straight line. */
+  const straightWithArrival = $derived.by(() => {
     if (!route) return null
     const height = route.startAltitude - route.landingElevation - arrivalHeight
     return height > 0 ? route.straightDistance / height : null
@@ -43,11 +49,11 @@
 
   /** What the terrain does to the straight line, when it does something. */
   const terrainNote = $derived.by(() => {
-    if (!route || straightRatio === null) return null
+    if (!route || straightWithArrival === null) return null
     const { glideRatio, limit } = route.straightLine
     const where = limit ? t.places.where(along(limit.distance), Math.round(limit.elevation)) : ''
     if (glideRatio === Infinity) return t.places.terrainBlocks(where)
-    if (limit && Number(formatRatio(glideRatio)) > Number(formatRatio(straightRatio)))
+    if (limit && Number(formatRatio(glideRatio)) > Number(formatRatio(straightWithArrival)))
       return t.places.terrainRaises(ratio(glideRatio), where)
     return null
   })
@@ -105,7 +111,7 @@
           </span>
           <span title={t.places.straightDistance}>{@render icon('distance', t.places.distance)}{km(route.straightDistance)} km</span>
           {#if straightRatio !== null}
-            <span title={t.places.straightRatioTitle(arrivalHeight)}>
+            <span title={t.places.straightRatioTitle}>
               {@render icon('straight', t.places.straightRatio)}{ratio(straightRatio)}
             </span>
           {/if}

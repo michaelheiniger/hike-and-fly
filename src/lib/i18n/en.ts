@@ -47,8 +47,8 @@ export const en = {
     distance: 'Distance',
     straightDistance: 'Straight distance',
     straightRatio: 'Straight line needs',
-    straightRatioTitle: (arrival: number) =>
-      `Glide ratio along the straight line, ignoring terrain: distance over height, with ${arrival} m above the landing`,
+    straightRatioTitle:
+      "Glide ratio along the straight line, ignoring terrain: distance over the height down to the landing's ground, without arrival height",
     /** Where terrain limits the straight line: "1.2 km out (2050 m)". */
     where: (distance: string, elevation: number) => `${distance} out (${elevation} m)`,
     terrainBlocks: (where: string) => `Terrain blocks the straight line ${where}.`,
