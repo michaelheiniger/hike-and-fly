@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import { t } from '../lib/i18n/index.svelte'
 
   interface Props {
-    /** What the tip explains, for the button's accessible name. */
+    /** What the tip explains, for the button's accessible name (from `t.topics`). */
     topic: string
     children: Snippet
   }
@@ -26,7 +27,7 @@
   }
 </script>
 
-<button bind:this={button} type="button" class="info" popovertarget={id} aria-label="About {topic}">i</button>
+<button bind:this={button} type="button" class="info" popovertarget={id} aria-label={t.infoAbout(topic)}>i</button>
 <span {id} class="tip" popover onbeforetoggle={place}>{@render children()}</span>
 
 <style>

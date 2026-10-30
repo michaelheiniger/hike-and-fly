@@ -2,15 +2,13 @@ import type { StyleSpecification } from 'maplibre-gl'
 
 export type BasemapId = 'swisstopo' | 'opentopomap'
 
-export const BASEMAPS: Record<BasemapId, { label: string; tiles: string; maxzoom: number; attribution: string }> = {
+export const BASEMAPS: Record<BasemapId, { tiles: string; maxzoom: number; attribution: string }> = {
   swisstopo: {
-    label: 'swisstopo (Switzerland)',
     tiles: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
     maxzoom: 18,
     attribution: '© <a href="https://www.swisstopo.admin.ch/">swisstopo</a>',
   },
   opentopomap: {
-    label: 'OpenTopoMap (worldwide)',
     tiles: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
     maxzoom: 17,
     attribution:

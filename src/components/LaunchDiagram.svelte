@@ -1,5 +1,6 @@
 <script lang="ts">
   import { clearanceAt } from '../lib/glide/geometry'
+  import { t } from '../lib/i18n/index.svelte'
 
   interface Props {
     clearance: number
@@ -47,7 +48,7 @@
     return kept
   })
   /** A narrow run is labelled from the start rather than centered on it. */
-  const runWide = $derived(x(takeoffRun) - x(0) > 26)
+  const runWide = $derived(x(takeoffRun) - x(0) > t.diagram.run.length * 6 + 6)
 </script>
 
 <div bind:clientWidth={W}>
@@ -55,7 +56,7 @@
     width={W}
     height={H}
     role="img"
-    aria-label="Side view: takeoff run of {takeoffRun} m, then the clearance grows to {clearance} m over the {launchZone} m launch zone"
+    aria-label={t.diagram.label(takeoffRun, clearance, launchZone)}
   >
     {#if takeoffRun > 0}
       <rect class="zone run" x={x(0)} y={margin.top} width={x(takeoffRun) - x(0)} height={plotH} />
@@ -90,21 +91,18 @@
     <!-- Axis: band names, then distances from the start. -->
     {#if takeoffRun > 0}
       <text class="label" x={runWide ? (x(0) + x(takeoffRun)) / 2 : x(0)} y={H - 18} text-anchor={runWide ? 'middle' : 'start'}>
-        Run
+        {t.diagram.run}
       </text>
     {/if}
     {#if launchZone > 0}
-      <text class="label" x={(x(takeoffRun) + x(zoneEnd)) / 2} y={H - 18} text-anchor="middle">Launch zone</text>
+      <text class="label" x={(x(takeoffRun) + x(zoneEnd)) / 2} y={H - 18} text-anchor="middle">{t.diagram.launchZone}</text>
     {/if}
     {#each ticks as d (d)}
       <text class="tick" x={x(d)} y={H - 4} text-anchor={d === 0 ? 'start' : 'middle'}>{d} m</text>
     {/each}
   </svg>
 </div>
-<p class="note">
-  Start (dark), liftoff after the run (white), glide path (solid) and required clearance (dashed). Distances to scale,
-  heights not.
-</p>
+<p class="note">{t.diagram.note}</p>
 
 <style>
   svg {

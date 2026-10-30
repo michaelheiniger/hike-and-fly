@@ -31,23 +31,6 @@ export const DEFAULTS: Assumptions = {
   arrivalHeight: 100,
 }
 
-/** What each assumption means, shown next to it in the panel. */
-export const EXPLANATIONS = {
-  startHeight:
-    'Height at the start. 0 m AGL is a ground launch. Use a higher value to plan a final glide after climbing in a thermal.',
-  glideRatio:
-    'Still-air glide ratio. The default of 5 is pessimistic on purpose: a light hike & fly wing does about 7 at trim, and the margin covers sinking air and headwind.',
-  clearance:
-    'Minimum height above terrain to fly over it and continue. Margin for sink, turbulence near slopes and elevation data errors. Areas below it (lowest legend band) are reachable as a final glide only.',
-  launchZone:
-    'After the liftoff (the start, or the end of the takeoff run), the clearance grows from 0 to its full value over this distance — otherwise no ground launch would be possible. The ramp is cubic: required clearance = clearance × (distance flown since the liftoff ÷ launch zone)³. It grows slowly at first (1/64 at a quarter, 1/8 at mid-distance, about 2/5 at three quarters), then quickly towards the end.',
-  takeoffRun:
-    'On a ground launch, how far the pilot may run before lifting off: the glide begins from the ground anywhere this close to the start and not above it, typically where the slope steepens. Otherwise a gentle takeoff, whose first meters are flatter than the glide path, would block everything. 0 starts the glide exactly at the start.',
-  arrivalHeight:
-    'Height above the landing when arriving, for the landing pattern. The required glide ratio includes it.',
-  wind: 'Not modelled yet: computations assume still air. Headwind and sink shrink the reachable area.',
-} as const
-
 /** Limits for inputs and URL values. */
 export const LIMITS = {
   startHeight: [-500, 9000],

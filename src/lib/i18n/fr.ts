@@ -98,4 +98,86 @@ export const fr: Messages = {
     remove: 'Retirer',
     removeOne: (n) => `Retirer la balise ${n}`,
   },
+
+  infoAbout: (topic) => `À propos de ${topic}`,
+  topics: {
+    glideRatio: 'la finesse',
+    startHeight: 'la hauteur de départ',
+    clearance: 'la marge sur le relief',
+    launchZone: 'la zone de décollage',
+    takeoffRun: 'la course d’envol',
+    arrivalHeight: 'la hauteur d’arrivée',
+    wind: 'le vent',
+    elevation: 'les données d’altitude',
+    slopeClasses: 'les classes de pente',
+    offline: 'les cartes hors ligne',
+  },
+
+  glide: {
+    title: 'Plané',
+    glideRatio: 'Finesse',
+    default: 'par défaut',
+    startHeight: 'Hauteur de départ',
+    heightReference: 'Référence de hauteur',
+    agl: 'Sol',
+    amsl: 'Alt.',
+  },
+
+  assumptions: {
+    title: 'Hypothèses',
+    clearance: 'Marge sur le relief',
+    launchZone: 'Zone de décollage',
+    takeoffRun: 'Course d’envol',
+    arrivalHeight: 'Hauteur d’arrivée',
+    afterLiftoff: 'Après l’envol (m)',
+    clearanceRow: 'Marge (m)',
+    wind: 'Vent',
+    stillAir: 'Air calme',
+    elevationData: 'Données d’altitude',
+    elevationTip: (source) =>
+      `${source}. Les crêtes sont gardées à leur point le plus haut dans chaque cellule de la grille, pour ne jamais sous-estimer un obstacle. Les altitudes du décollage et de l’atterrissage sont exactes là où le service d’altitude de swisstopo répond.`,
+    grid: (meters) => `grille de ${meters} m`,
+    reset: 'Valeurs par défaut',
+  },
+
+  elevationSources: {
+    aws: 'AWS Terrain Tiles (mondial, ~10–30 m dans les Alpes)',
+    swiss: 'swissALTI3D (swisstopo, 2 m) en Suisse, gardé à son point le plus haut par pixel d’environ 13 m ; AWS Terrain Tiles ailleurs',
+  },
+
+  explanations: {
+    startHeight:
+      'Hauteur au décollage. 0 m sol correspond à un décollage à pied. Une valeur plus haute permet de planifier un plané final après une ascendance thermique.',
+    glideRatio:
+      'Finesse en air calme. La valeur par défaut de 5 est volontairement pessimiste : une aile légère de hike & fly fait environ 7 bras hauts, et la marge couvre l’air descendant et le vent de face.',
+    clearance:
+      'Hauteur minimale au-dessus du relief pour le survoler et continuer. Marge pour les descendances, la turbulence près des pentes et les erreurs des données d’altitude. Les zones en dessous (bande la plus basse de la légende) ne sont atteignables qu’en plané final.',
+    launchZone:
+      'Après l’envol (le décollage, ou la fin de la course d’envol), la marge croît de 0 à sa pleine valeur sur cette distance — sinon aucun décollage à pied ne serait possible. La rampe est cubique : marge requise = marge × (distance parcourue depuis l’envol ÷ zone de décollage)³. Elle croît lentement au début (1/64 au quart, 1/8 à mi-distance, environ 2/5 aux trois quarts), puis vite vers la fin.',
+    takeoffRun:
+      'Lors d’un décollage à pied, la distance que le pilote peut courir avant de s’envoler : le plané commence au sol, n’importe où à cette distance du décollage et pas plus haut que lui, typiquement là où la pente se raidit. Sinon, un décollage en pente douce, dont les premiers mètres sont plus plats que la trajectoire, bloquerait tout. 0 fait commencer le plané exactement au décollage.',
+    arrivalHeight:
+      'Hauteur au-dessus de l’atterrissage à l’arrivée, pour la prise de terrain. La finesse requise l’inclut.',
+    wind: 'Pas encore modélisé : les calculs supposent un air calme. Le vent de face et les descendances réduisent la zone atteignable.',
+  },
+
+  settings: {
+    title: 'Réglages',
+    close: 'Fermer les réglages',
+    map: 'Carte',
+    basemaps: { swisstopo: 'swisstopo (Suisse)', opentopomap: 'OpenTopoMap (monde)' },
+    slopeClasses: 'Classes de pente',
+    slopeTip: 'swisstopo, d’après la recommandation avalanches du SLF. Suisse et régions frontalières seulement.',
+    colors: 'Couleurs',
+    colorsStandard: 'Du rouge au vert',
+    colorsColorblind: 'Adaptées aux daltoniens',
+  },
+
+  diagram: {
+    label: (run, clearance, zone) =>
+      `Vue de profil : course d’envol de ${run} m, puis la marge croît jusqu’à ${clearance} m sur la zone de décollage de ${zone} m`,
+    run: 'Course',
+    launchZone: 'Zone de décollage',
+    note: 'Décollage (foncé), envol après la course (blanc), trajectoire (trait plein) et marge requise (tirets). Distances à l’échelle, hauteurs non.',
+  },
 }

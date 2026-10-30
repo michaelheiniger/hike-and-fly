@@ -4,8 +4,8 @@
   import { clearanceAt } from '../lib/glide/geometry'
   import { BASEMAPS, SLOPE_OVERLAY, type BasemapId } from '../lib/map/style'
   import { LANGUAGE_NAMES, t } from '../lib/i18n/index.svelte'
-  import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LANGUAGES, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
-  import { AWS_TERRARIUM } from '../lib/terrain/loader'
+  import { DEFAULTS, GLIDE_STEP, LANGUAGES, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
+  import { AWS_TERRARIUM, SWISS_ARCHIVE } from '../lib/terrain/loader'
   import InfoTip from './InfoTip.svelte'
   import LaunchDiagram from './LaunchDiagram.svelte'
 
@@ -23,6 +23,14 @@
   let { result, elevationSource, basemap = $bindable(), landing, footer }: Props = $props()
 
   let dialog: HTMLDialogElement
+
+  /** The elevation source in the interface language: the worker describes it in English. */
+  const sourceName = (description: string | null) =>
+    description === SWISS_ARCHIVE.description
+      ? t.elevationSources.swiss
+      : description === AWS_TERRARIUM.description || description === null
+        ? t.elevationSources.aws
+        : description
 
   /** Opens the settings: map, offline areas and assumptions. */
   export function openSettings() {
@@ -72,20 +80,20 @@
 </script>
 
 <section>
-  <h2>Glide</h2>
+  <h2>{t.glide.title}</h2>
 
   <div class="field stacked">
     <span class="label">
-      <label for="glide-ratio">Glide ratio</label>
-      {#if isDefault('glideRatio')}<em>default</em>{/if}
-      <InfoTip topic="the glide ratio">{EXPLANATIONS.glideRatio}</InfoTip>
+      <label for="glide-ratio">{t.glide.glideRatio}</label>
+      {#if isDefault('glideRatio')}<em>{t.glide.default}</em>{/if}
+      <InfoTip topic={t.topics.glideRatio}>{t.explanations.glideRatio}</InfoTip>
     </span>
     <span class="inputs">
       <input id="glide-ratio" type="range" min="3" max="12" step={GLIDE_STEP} bind:value={settings.glideRatio} />
       <input
         type="number"
         class="narrow"
-        aria-label="Glide ratio"
+        aria-label={t.glide.glideRatio}
         step={GLIDE_STEP}
         min={LIMITS.glideRatio[0]}
         max={LIMITS.glideRatio[1]}
@@ -97,8 +105,8 @@
 
   <div class="field">
     <span class="label">
-      <label for="start-height">Start height</label>
-      <InfoTip topic="the start height">{EXPLANATIONS.startHeight}</InfoTip>
+      <label for="start-height">{t.glide.startHeight}</label>
+      <InfoTip topic={t.topics.startHeight}>{t.explanations.startHeight}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -110,9 +118,9 @@
         value={settings.startHeight}
         onchange={numberInput('startHeight')}
       />
-      <span class="segmented" role="group" aria-label="Height reference">
-        <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>AGL</button>
-        <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>AMSL</button>
+      <span class="segmented" role="group" aria-label={t.glide.heightReference}>
+        <button type="button" aria-pressed={settings.startHeightMode === 'agl'} onclick={() => setMode('agl')}>{t.glide.agl}</button>
+        <button type="button" aria-pressed={settings.startHeightMode === 'amsl'} onclick={() => setMode('amsl')}>{t.glide.amsl}</button>
       </span>
     </span>
   </div>
@@ -123,9 +131,9 @@
 {#snippet assumptionFields()}
   <div class="field">
     <span class="label">
-      <label for="clearance">Terrain clearance</label>
-      {#if isDefault('clearance')}<em>default</em>{/if}
-      <InfoTip topic="the terrain clearance">{EXPLANATIONS.clearance}</InfoTip>
+      <label for="clearance">{t.assumptions.clearance}</label>
+      {#if isDefault('clearance')}<em>{t.glide.default}</em>{/if}
+      <InfoTip topic={t.topics.clearance}>{t.explanations.clearance}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -143,9 +151,9 @@
 
   <div class="field">
     <span class="label">
-      <label for="launch-zone">Launch zone</label>
-      {#if isDefault('launchZone')}<em>default</em>{/if}
-      <InfoTip topic="the launch zone">{EXPLANATIONS.launchZone}</InfoTip>
+      <label for="launch-zone">{t.assumptions.launchZone}</label>
+      {#if isDefault('launchZone')}<em>{t.glide.default}</em>{/if}
+      <InfoTip topic={t.topics.launchZone}>{t.explanations.launchZone}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -163,9 +171,9 @@
 
   <div class="field">
     <span class="label">
-      <label for="takeoff-run">Takeoff run</label>
-      {#if isDefault('takeoffRun')}<em>default</em>{/if}
-      <InfoTip topic="the takeoff run">{EXPLANATIONS.takeoffRun}</InfoTip>
+      <label for="takeoff-run">{t.assumptions.takeoffRun}</label>
+      {#if isDefault('takeoffRun')}<em>{t.glide.default}</em>{/if}
+      <InfoTip topic={t.topics.takeoffRun}>{t.explanations.takeoffRun}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -187,11 +195,11 @@
     <table class="ramp small">
       <tbody>
         <tr>
-          <th scope="row">After liftoff (m)</th>
+          <th scope="row">{t.assumptions.afterLiftoff}</th>
           {#each ramp as r (r.distance)}<td>{Math.round(r.distance)}</td>{/each}
         </tr>
         <tr>
-          <th scope="row">Clearance (m)</th>
+          <th scope="row">{t.assumptions.clearanceRow}</th>
           {#each ramp as r (r.distance)}<td>{Math.round(r.clearance)}</td>{/each}
         </tr>
       </tbody>
@@ -200,9 +208,9 @@
 
   <div class="field">
     <span class="label">
-      <label for="arrival-height">Arrival height</label>
-      {#if isDefault('arrivalHeight')}<em>default</em>{/if}
-      <InfoTip topic="the arrival height">{EXPLANATIONS.arrivalHeight}</InfoTip>
+      <label for="arrival-height">{t.assumptions.arrivalHeight}</label>
+      {#if isDefault('arrivalHeight')}<em>{t.glide.default}</em>{/if}
+      <InfoTip topic={t.topics.arrivalHeight}>{t.explanations.arrivalHeight}</InfoTip>
     </span>
     <span class="inputs">
       <input
@@ -219,19 +227,16 @@
   </div>
 
   <div class="field">
-    <span class="label">Wind <InfoTip topic="wind">{EXPLANATIONS.wind}</InfoTip></span>
-    <span class="value warning">Still air</span>
+    <span class="label">{t.assumptions.wind} <InfoTip topic={t.topics.wind}>{t.explanations.wind}</InfoTip></span>
+    <span class="value warning">{t.assumptions.stillAir}</span>
   </div>
 
   <div class="field">
     <span class="label">
-      Elevation data
-      <InfoTip topic="the elevation data">
-        {elevationSource ?? AWS_TERRARIUM.description}. Ridges are kept at their highest point in each grid cell so
-        obstacles are never underestimated. Start and landing heights are exact where swisstopo's height service answers.
-      </InfoTip>
+      {t.assumptions.elevationData}
+      <InfoTip topic={t.topics.elevation}>{t.assumptions.elevationTip(sourceName(elevationSource))}</InfoTip>
     </span>
-    <span class="value">{result ? `${Math.round(result.cellSize)} m grid` : '—'}</span>
+    <span class="value">{result ? t.assumptions.grid(Math.round(result.cellSize)) : '—'}</span>
   </div>
 
   <button
@@ -243,7 +248,7 @@
       settings.launchZone = DEFAULTS.launchZone
       settings.takeoffRun = DEFAULTS.takeoffRun
       settings.arrivalHeight = DEFAULTS.arrivalHeight
-    }}>Reset to defaults</button
+    }}>{t.assumptions.reset}</button
   >
 {/snippet}
 
@@ -251,33 +256,31 @@
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog bind:this={dialog} aria-labelledby="settings-title" onclick={(e) => e.target === dialog && dialog.close()}>
   <div class="dialog-head">
-    <h2 id="settings-title" class="title">Settings</h2>
-    <button type="button" class="close" aria-label="Close settings" onclick={() => dialog.close()}>✕</button>
+    <h2 id="settings-title" class="title">{t.settings.title}</h2>
+    <button type="button" class="close" aria-label={t.settings.close} onclick={() => dialog.close()}>✕</button>
   </div>
 
   <section>
-    <h2>Assumptions</h2>
+    <h2>{t.assumptions.title}</h2>
     {@render assumptionFields()}
   </section>
 
   {@render footer?.()}
 
   <section>
-    <h2>Map</h2>
+    <h2>{t.settings.map}</h2>
     <label class="field">
-      <span class="label">Map</span>
+      <span class="label">{t.settings.map}</span>
       <select bind:value={basemap}>
-        {#each Object.entries(BASEMAPS) as [id, b] (id)}
-          <option value={id}>{b.label}</option>
+        {#each Object.keys(BASEMAPS) as BasemapId[] as id (id)}
+          <option value={id}>{t.settings.basemaps[id]}</option>
         {/each}
       </select>
     </label>
     {#if preferences.showSlope}
       <span class="label">
-        Slope classes
-        <InfoTip topic="the slope classes">
-          swisstopo, after the SLF avalanche recommendation. Switzerland and border areas only.
-        </InfoTip>
+        {t.settings.slopeClasses}
+        <InfoTip topic={t.topics.slopeClasses}>{t.settings.slopeTip}</InfoTip>
       </span>
       <ul class="slope-legend">
         {#each SLOPE_OVERLAY.classes as c (c.label)}
@@ -286,10 +289,10 @@
       </ul>
     {/if}
     <label class="field">
-      <span class="label">Colors</span>
+      <span class="label">{t.settings.colors}</span>
       <select bind:value={preferences.colorScheme}>
-        <option value="standard">Red to green</option>
-        <option value="colorblind">Color-blind friendly</option>
+        <option value="standard">{t.settings.colorsStandard}</option>
+        <option value="colorblind">{t.settings.colorsColorblind}</option>
       </select>
     </label>
     <label class="field">

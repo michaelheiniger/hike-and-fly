@@ -100,4 +100,85 @@ export const de: Messages = {
     remove: 'Entfernen',
     removeOne: (n) => `Wegpunkt ${n} entfernen`,
   },
+
+  infoAbout: (topic) => `Erklärung: ${topic}`,
+  topics: {
+    glideRatio: 'Gleitzahl',
+    startHeight: 'Starthöhe',
+    clearance: 'Geländeabstand',
+    launchZone: 'Startzone',
+    takeoffRun: 'Startlauf',
+    arrivalHeight: 'Ankunftshöhe',
+    wind: 'Wind',
+    elevation: 'Höhendaten',
+    slopeClasses: 'Hangneigungsklassen',
+    offline: 'Offline-Karten',
+  },
+
+  glide: {
+    title: 'Gleitflug',
+    glideRatio: 'Gleitzahl',
+    default: 'Standard',
+    startHeight: 'Starthöhe',
+    heightReference: 'Höhenbezug',
+    agl: 'ü. Grund',
+    amsl: 'ü. M.',
+  },
+
+  assumptions: {
+    title: 'Annahmen',
+    clearance: 'Geländeabstand',
+    launchZone: 'Startzone',
+    takeoffRun: 'Startlauf',
+    arrivalHeight: 'Ankunftshöhe',
+    afterLiftoff: 'Nach Abheben (m)',
+    clearanceRow: 'Abstand (m)',
+    wind: 'Wind',
+    stillAir: 'Ruhige Luft',
+    elevationData: 'Höhendaten',
+    elevationTip: (source) =>
+      `${source}. Grate werden in jeder Gitterzelle auf ihrem höchsten Punkt gehalten, damit Hindernisse nie unterschätzt werden. Start- und Landeplatzhöhen sind exakt, wo der Höhendienst von swisstopo antwortet.`,
+    grid: (meters) => `${meters}-m-Gitter`,
+    reset: 'Auf Standardwerte zurücksetzen',
+  },
+
+  elevationSources: {
+    aws: 'AWS Terrain Tiles (weltweit, ~10–30 m in den Alpen)',
+    swiss: 'swissALTI3D (swisstopo, 2 m) in der Schweiz, pro ~13-m-Pixel auf dem höchsten Punkt gehalten; anderswo AWS Terrain Tiles',
+  },
+
+  explanations: {
+    startHeight:
+      'Höhe am Start. 0 m über Grund ist ein Fussstart. Ein höherer Wert plant einen Endanflug nach einem Thermikaufstieg.',
+    glideRatio:
+      'Gleitzahl in ruhiger Luft. Der Standardwert 5 ist absichtlich pessimistisch: Ein leichter Hike-&-Fly-Schirm erreicht ungebremst etwa 7, und die Reserve deckt sinkende Luft und Gegenwind.',
+    clearance:
+      'Mindesthöhe über dem Gelände, um es zu überfliegen und weiterzufliegen. Reserve für Sinken, Turbulenzen in Hangnähe und Fehler der Höhendaten. Gebiete darunter (unterstes Band der Legende) sind nur im Endanflug erreichbar.',
+    launchZone:
+      'Nach dem Abheben (am Start oder am Ende des Startlaufs) wächst der Geländeabstand über diese Distanz von 0 auf den vollen Wert — sonst wäre kein Fussstart möglich. Der Anstieg ist kubisch: erforderlicher Abstand = Abstand × (seit dem Abheben geflogene Distanz ÷ Startzone)³. Er wächst zuerst langsam (1/64 nach einem Viertel, 1/8 nach der Hälfte, etwa 2/5 nach drei Vierteln), gegen Ende schnell.',
+    takeoffRun:
+      'Beim Fussstart die Strecke, die der Pilot vor dem Abheben laufen darf: Der Gleitflug beginnt am Boden irgendwo so nahe am Start und nicht höher als er, typischerweise dort, wo der Hang steiler wird. Sonst würde ein flacher Startplatz, dessen erste Meter flacher als der Gleitpfad sind, alles blockieren. Mit 0 beginnt der Gleitflug genau am Start.',
+    arrivalHeight: 'Höhe über dem Landeplatz bei der Ankunft, für die Landevolte. Die erforderliche Gleitzahl schliesst sie ein.',
+    wind: 'Noch nicht modelliert: Die Berechnungen gehen von ruhiger Luft aus. Gegenwind und Sinken verkleinern das erreichbare Gebiet.',
+  },
+
+  settings: {
+    title: 'Einstellungen',
+    close: 'Einstellungen schliessen',
+    map: 'Karte',
+    basemaps: { swisstopo: 'swisstopo (Schweiz)', opentopomap: 'OpenTopoMap (weltweit)' },
+    slopeClasses: 'Hangneigungsklassen',
+    slopeTip: 'swisstopo, nach der Lawinenempfehlung des SLF. Nur Schweiz und Grenzgebiete.',
+    colors: 'Farben',
+    colorsStandard: 'Rot bis Grün',
+    colorsColorblind: 'Für Farbenblinde geeignet',
+  },
+
+  diagram: {
+    label: (run, clearance, zone) =>
+      `Seitenansicht: Startlauf von ${run} m, danach wächst der Geländeabstand über die Startzone von ${zone} m auf ${clearance} m`,
+    run: 'Startlauf',
+    launchZone: 'Startzone',
+    note: 'Start (dunkel), Abheben nach dem Startlauf (weiss), Gleitpfad (durchgezogen) und erforderlicher Geländeabstand (gestrichelt). Distanzen massstäblich, Höhen nicht.',
+  },
 }
