@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MAX_GLIDE_RATIO } from '../lib/glide/required'
+  import { MAX_GLIDE_RATIO, formatRatio as up } from '../lib/glide/required'
   import type { RouteOption, RouteResult } from '../lib/compute/route'
   import { altitudeAt } from '../lib/glide/geometry'
 
@@ -14,16 +14,12 @@
     waypointCount: number
     selected: number | null
     onselect: (id: number) => void
-    onclear: () => void
   }
 
-  let { result, computing, searchingAlternatives, error, glideRatio, arrivalHeight, waypointCount, selected, onselect, onclear }: Props =
+  let { result, computing, searchingAlternatives, error, glideRatio, arrivalHeight, waypointCount, selected, onselect }: Props =
     $props()
 
   const via = $derived(waypointCount ? ` via ${waypointCount === 1 ? 'the waypoint' : `the ${waypointCount} waypoints`}` : '')
-
-  /** Rounded up: the conservative side. */
-  const up = (gr: number) => (Math.ceil(gr * 10 - 1e-9) / 10).toFixed(1)
 
   /** Glide ratio for the straight line, ignoring terrain: distance over height. */
   const straightRatio = $derived.by(() => {
@@ -33,19 +29,6 @@
   })
 
   const best = $derived(result?.options[0] ?? null)
-
-  /** Distance along the straight line, in m close to the start. */
-  const along = (d: number) => (d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1)} km`)
-
-  /** What the terrain does to the straight line: blocks it, raises its ratio, or nothing. */
-  const terrainNote = $derived.by(() => {
-    if (!result || straightRatio === null) return null
-    const { glideRatio, limit } = result.straightLine
-    const where = limit ? `${along(limit.distance)} out (${Math.round(limit.elevation)} m)` : ''
-    if (glideRatio === Infinity) return `Blocked by terrain ${where}.`
-    if (limit && Number(up(glideRatio)) > Number(up(straightRatio))) return `The terrain raises it to ${up(glideRatio)}: ground ${where}.`
-    return 'Clear of the terrain.'
-  })
 
   /** Height above the landing when flying a route with the pilot's glide ratio. */
   const arrival = (o: RouteOption) =>
@@ -58,32 +41,7 @@
 </script>
 
 <section>
-  <div class="head">
-    <h2>Landing</h2>
-    <button type="button" class="link" onclick={onclear}>Remove</button>
-  </div>
-
   {#if result}
-    <div class="row">
-      <span class="label">Ground</span>
-      <span class="value">{Math.round(result.landingElevation)} m AMSL</span>
-    </div>
-    <div class="row">
-      <span class="label">Vertical distance</span>
-      <span class="value">{Math.round(result.startAltitude - result.landingElevation)} m</span>
-    </div>
-    <div class="row">
-      <span class="label">Straight distance</span>
-      <span class="value">{(result.straightDistance / 1000).toFixed(1)} km</span>
-    </div>
-    {#if straightRatio !== null}
-      <div class="row">
-        <span class="label">Straight line</span>
-        <span class="value">needs {up(straightRatio)}</span>
-      </div>
-      <span class="muted">Distance over height, with {arrivalHeight} m above the landing. {terrainNote}</span>
-    {/if}
-
     <div class="hero" aria-live="polite">
       <span class="label">Required glide ratio</span>
       {#if best}
@@ -161,37 +119,16 @@
     gap: 6px;
   }
 
-  .head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
-  h2,
   h3 {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-muted);
-    margin: 0;
-  }
-
-  h3 {
-    margin-top: 4px;
-  }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    margin: 4px 0 0;
   }
 
   .label {
     font-weight: 500;
-  }
-
-  .value {
-    font-variant-numeric: tabular-nums;
   }
 
   .hero {
@@ -282,14 +219,5 @@
 
   .error {
     color: var(--critical);
-  }
-
-  .link {
-    background: none;
-    border: 0;
-    padding: 0;
-    color: var(--accent);
-    text-decoration: underline;
-    cursor: pointer;
   }
 </style>

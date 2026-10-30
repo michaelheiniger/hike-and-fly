@@ -11,8 +11,6 @@
     result: ReachResult | null
     /** Description of the elevation data used, from the worker. */
     elevationSource: string | null
-    computing: boolean
-    error: string | null
     basemap: BasemapId
     /** Rendered after the glide inputs (the landing and its routes). */
     landing?: Snippet
@@ -20,7 +18,7 @@
     footer?: Snippet
   }
 
-  let { result, elevationSource, computing, error, basemap = $bindable(), landing, footer }: Props = $props()
+  let { result, elevationSource, basemap = $bindable(), landing, footer }: Props = $props()
 
   let dialog: HTMLDialogElement
 
@@ -70,55 +68,6 @@
     }),
   )
 </script>
-
-{#if settings.start}
-  <section class="start">
-    <div class="row">
-      <span class="label">Start</span>
-      <span class="value">
-        {settings.start.lat.toFixed(4)}°, {settings.start.lng.toFixed(4)}°
-      </span>
-    </div>
-    {#if result}
-      <div class="row">
-        <span class="label">Ground</span>
-        <span class="value">{Math.round(result.startElevation)} m AMSL</span>
-      </div>
-      <div class="row">
-        <span class="label">Start altitude</span>
-        <span class="value">
-          {Math.round(result.startAltitude)} m AMSL · {Math.round(result.startAltitude - result.startElevation)} m AGL
-        </span>
-      </div>
-    {/if}
-
-    <div class="status" aria-live="polite">
-      {#if computing}
-        <span class="muted">Computing…</span>
-      {:else if error}
-        <span class="error">⚠ {error}</span>
-      {:else if result && result.reachableCells <= 1}
-        <span class="warning">
-          ⚠ No glide possible from here: the ground within the takeoff run ({settings.takeoffRun} m) is not steeper than
-          the glide path. Pick a steeper slope, a longer takeoff run, or add start height.
-        </span>
-      {:else if result && result.beyondLaunchZone === 0}
-        <span class="warning">
-          ⚠ Nothing is reachable beyond the launch zone (first {settings.launchZone} m, left uncolored): the ground below
-          the start is barely steeper than the glide path. Pick a steeper slope or add start height.
-        </span>
-      {:else if result?.truncated}
-        <span class="warning">⚠ The reachable area reaches the edge of the search area and may be cut off.</span>
-      {:else if result}
-        <span class="muted small">
-          Computed in {((result.timings.terrain + result.timings.search) / 1000).toFixed(1)} s (terrain {(
-            result.timings.terrain / 1000
-          ).toFixed(1)} s, search {(result.timings.search / 1000).toFixed(1)} s)
-        </span>
-      {/if}
-    </div>
-  </section>
-{/if}
 
 <section>
   <h2>Glide</h2>
@@ -404,7 +353,6 @@
     margin: 0;
   }
 
-  .row,
   .field {
     display: flex;
     flex-wrap: wrap;
@@ -487,20 +435,8 @@
     color: var(--on-accent);
   }
 
-  .status {
-    min-height: 1.4em;
-  }
-
-  .muted {
-    color: var(--text-muted);
-  }
-
   .small {
     font-size: 12px;
-  }
-
-  .error {
-    color: var(--critical);
   }
 
   .warning {

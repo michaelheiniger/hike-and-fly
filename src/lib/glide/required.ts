@@ -48,6 +48,9 @@ export function arriveWith(grid: ElevationGrid, problem: ArrivalProblem, glideRa
 /** Highest glide ratio considered: beyond any paraglider. */
 export const MAX_GLIDE_RATIO = 25
 
+/** A glide ratio for display, rounded up to a tenth: the conservative side. */
+export const formatRatio = (gr: number) => (Math.ceil(gr * 10 - 1e-9) / 10).toFixed(1)
+
 /** Grid routes run up to ~3 % longer than straight lines (16-neighbour moves). */
 const GRID_SLACK = 1.03
 

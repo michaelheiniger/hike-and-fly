@@ -6,6 +6,7 @@
   import Profile from './components/Profile.svelte'
   import RouteSummary from './components/RouteSummary.svelte'
   import OfflinePanel from './components/OfflinePanel.svelte'
+  import Places from './components/Places.svelte'
   import Waypoints from './components/Waypoints.svelte'
   import { listAreas, type Bounds, type OfflineArea } from './lib/offline/areas'
   import { PlannerClient, type Busy } from './lib/compute/client'
@@ -366,12 +367,22 @@
       {/if}
     </header>
 
+    <Places
+      {reach}
+      reachComputing={busy.reach}
+      {reachError}
+      {route}
+      arrivalHeight={routeRequest?.arrivalHeight ?? settings.arrivalHeight}
+      onclearlanding={() => {
+        settings.landing = null
+        clickSets = 'landing'
+      }}
+    />
+
     <AssumptionsPanel
       bind:this={planPanel}
       result={reach}
       {elevationSource}
-      computing={busy.reach}
-      error={reachError}
       bind:basemap={preferences.basemap}
     >
       {#snippet landing()}
@@ -393,10 +404,6 @@
             waypointCount={routeRequest?.waypoints?.length ?? 0}
             selected={shownRoute?.id ?? null}
             onselect={(id) => (selectedRoute = id)}
-            onclear={() => {
-              settings.landing = null
-              clickSets = 'landing'
-            }}
           />
           {#if narrow}
             {@render profile('profile-inline')}
