@@ -1,3 +1,4 @@
+import { flownSinceLiftoff } from '../glide/search'
 import { latFromMercatorY, mercatorY, type GeoGrid } from '../terrain/geo'
 
 export interface AglBand {
@@ -67,7 +68,8 @@ const LAUNCH_ZONE_EDGE: [number, number, number, number] = [26, 26, 25, 210]
 
 /**
  * RGBA image of the AGL bands. Unreachable cells are transparent, and so is the
- * launch zone (cells reached within `launchZone` meters of flight), where the
+ * launch zone (cells reached within `launchZone` meters of flight after their
+ * liftoff: `distance − glideStart`, see GlideResult), where the
  * glider is still leaving the slope; its cells next to the colored area mark its edge. The grid has rows of constant latitude step,
  * while a map image overlay is stretched linearly in Web Mercator: output rows
  * are resampled at Mercator-linear latitudes to line up.
@@ -75,6 +77,7 @@ const LAUNCH_ZONE_EDGE: [number, number, number, number] = [26, 26, 25, 210]
 export function renderAgl(
   agl: Float32Array,
   distance: Float32Array,
+  glideStart: Float32Array | null,
   launchZone: number,
   grid: GeoGrid,
   bands: AglBand[],
@@ -85,10 +88,11 @@ export function renderAgl(
   const colors = bands.map((b) => hexToRgb(b.color))
   const yNorth = mercatorY(grid.north)
   const ySouth = mercatorY(grid.north - grid.rows * grid.dLat)
+  const inZone = (i: number) => flownSinceLiftoff({ distance, glideStart }, i) < launchZone
   const beyond = (r: number, c: number) => {
     if (r < 0 || c < 0 || r >= grid.rows || c >= grid.cols) return false
     const i = r * grid.cols + c
-    return !Number.isNaN(agl[i]) && distance[i] >= launchZone
+    return !Number.isNaN(agl[i]) && !inZone(i)
   }
 
   for (let j = 0; j < height; j++) {
@@ -99,7 +103,7 @@ export function renderAgl(
       const v = agl[i]
       if (Number.isNaN(v)) continue
       const p = (j * width + c) * 4
-      if (distance[i] < launchZone) {
+      if (inZone(i)) {
         if (beyond(row - 1, c) || beyond(row + 1, c) || beyond(row, c - 1) || beyond(row, c + 1)) {
           rgba.set(LAUNCH_ZONE_EDGE, p)
         }

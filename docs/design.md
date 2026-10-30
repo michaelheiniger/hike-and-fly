@@ -117,7 +117,8 @@ The grid covers the box of all points. The reach overlay ignores waypoints. In l
 
 - AGL bands red → green (ColorBrewer RdYlGn); a color-blind scheme (viridis, monotonic
   lightness) is a per-browser preference. The profile's glide path uses the same colors.
-- The launch zone (cells reached within the launch zone distance) is left uncolored.
+- The launch zone (cells reached within the launch zone distance after their liftoff) is left
+  uncolored, its edge marked by a dark line.
 
 ## 2. Assumptions and defaults
 

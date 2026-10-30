@@ -464,7 +464,7 @@ Step lengths use the metric width of the departure row: `ℓ = hypot(dc · w_row
 | Reachable area | cells with a finite `d(x)` | |
 | Route to any cell | follow `predecessor` back to the start | [`traceRoute`, search.ts:211](../src/lib/glide/search.ts#L211) |
 | `truncated` | a reachable cell touches the grid border: the area may be cut off (60 km cap) | [search.ts:156](../src/lib/glide/search.ts#L156) |
-| "only the launch zone" warning | no reachable cell with `d ≥ L` | [reach.ts:82](../src/lib/compute/reach.ts#L82) |
+| "only the launch zone" warning | no reachable cell with `d − d_liftoff ≥ L` (`d_liftoff`: `d` at the cell's liftoff, §3.5) | [reach.ts:84](../src/lib/compute/reach.ts#L84) |
 
 > **Verify (§6)**
 > - `search.test.ts`: synthetic terrains (flat plane, cone, wall, wall with a gap, closed wall); every rule above has its own test.
@@ -633,8 +633,9 @@ moving the GR slider re-runs only the pilot's route ([route.ts:171](../src/lib/c
   `0 – C` "final glide only", then `C`, 250, 500, 750, 1000, 1500, 2000 m and above.
   Red → green (ColorBrewer RdYlGn) by default. Viridis is available as a colour-blind
   scheme (monotonic lightness), stored per browser.
-- The launch zone (cells reached with `d < L`) is left uncolored: AGL there is dominated by
-  the slope just below the takeoff.
+- The launch zone (cells reached with `d − d_liftoff < L`, measured from their liftoff like
+  the clearance ramp) is left uncolored, its edge marked by a dark line: AGL there is
+  dominated by the slope just below the takeoff.
 - The pilot's route is drawn solid when it reaches the landing. Otherwise the required
   route is drawn dashed. The profile uses the same colors as the overlay.
 

@@ -11,6 +11,7 @@
   import { listAreas, type Bounds, type OfflineArea } from './lib/offline/areas'
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
+  import { flownSinceLiftoff } from './lib/glide/search'
   import { groundLaunch } from './lib/compute/terrain'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
   import { aglBands, renderAgl } from './lib/render/agl'
@@ -127,7 +128,7 @@
       return
     }
     const r = reach
-    const image = renderAgl(r.agl, r.distance, reachRequest?.launchZone ?? 0, r.grid, bands)
+    const image = renderAgl(r.agl, r.distance, r.glideStart, reachRequest?.launchZone ?? 0, r.grid, bands)
     const canvas = document.createElement('canvas')
     canvas.width = image.width
     canvas.height = image.height
@@ -200,7 +201,7 @@
     const i = cell.row * reach.grid.cols + cell.col
     const d = reach.distance[i]
     if (d === Infinity) return { reachable: false as const }
-    if (d < reachRequest.launchZone) return { reachable: true as const, launchZone: true as const }
+    if (flownSinceLiftoff(reach, i) < reachRequest.launchZone) return { reachable: true as const, launchZone: true as const }
     return {
       reachable: true as const,
       launchZone: false as const,

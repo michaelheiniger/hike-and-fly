@@ -1,4 +1,4 @@
-import { computeAgl, searchGlide } from '../glide/search'
+import { computeAgl, flownSinceLiftoff, searchGlide } from '../glide/search'
 import type { GeoGrid, LngLat } from '../terrain/geo'
 import {
   DEFAULT_MAX_RADIUS,
@@ -38,6 +38,8 @@ export interface ReachResult {
   truncated: boolean
   /** Number of reachable cells; 1 means no glide is possible from the start. */
   reachableCells: number
+  /** Distance flown at each cell's liftoff, null without a takeoff run (see GlideResult). */
+  glideStart: Float32Array | null
   /** Reachable cells beyond the launch zone, which is left uncolored on the map. */
   beyondLaunchZone: number
   timings: { terrain: number; search: number }
@@ -76,10 +78,10 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
   const agl = computeAgl(elevationGrid, result, startAltitude, glideRatio)
   let reachableCells = 0
   let beyondLaunchZone = 0
-  for (const d of result.distance) {
-    if (d === Infinity) continue
+  for (let i = 0; i < result.distance.length; i++) {
+    if (result.distance[i] === Infinity) continue
     reachableCells++
-    if (d >= launchZone) beyondLaunchZone++
+    if (flownSinceLiftoff(result, i) >= launchZone) beyondLaunchZone++
   }
   const t2 = performance.now()
 
@@ -91,6 +93,7 @@ export async function computeReach(req: ReachRequest, loadTiles: LoadTiles, opti
     zoom,
     agl,
     distance: result.distance,
+    glideStart: result.glideStart,
     truncated: result.truncated,
     reachableCells,
     beyondLaunchZone,

@@ -45,10 +45,20 @@ export interface GlideResult {
    * so the altitude over every cell is `startAltitude − distance / glideRatio`.
    */
   distance: Float32Array
+  /**
+   * `distance` at each cell's liftoff, where its glide and the clearance ramp began: 0 from
+   * the start, more after a takeoff run. Null without a takeoff run (0 everywhere).
+   */
+  glideStart: Float32Array | null
   /** Index of the previous cell on the shortest route, -1 for the start, liftoff and unreachable cells. */
   predecessor: Int32Array
   /** True if a reachable cell touches the grid border (the area may be cut off). */
   truncated: boolean
+}
+
+/** Distance flown since the liftoff at cell `i`: the launch zone is measured from there. */
+export function flownSinceLiftoff(r: Pick<GlideResult, 'distance' | 'glideStart'>, i: number): number {
+  return r.distance[i] - (r.glideStart?.[i] ?? 0)
 }
 
 interface Move {
@@ -97,7 +107,7 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
 
   const distance = new Float32Array(cellCount).fill(Infinity)
   const predecessor = new Int32Array(cellCount).fill(-1)
-  const result: GlideResult = { distance, predecessor, truncated: false }
+  const result: GlideResult = { distance, glideStart: null, predecessor, truncated: false }
 
   if (startCol < 0 || startCol >= cols || startRow < 0 || startRow >= rows) return result
   const start = startRow * cols + startCol
@@ -126,6 +136,7 @@ export function searchGlide(grid: ElevationGrid, params: GlideParams): GlideResu
   // Liftoffs after running down: at the ground, a hair above so the glide can go on.
   // The clearance ramps from each liftoff, so `offset` keeps where its glide began.
   const offset = takeoffRun > 0 ? new Float32Array(cellCount) : null
+  result.glideStart = offset
   if (offset) {
     const dr = Math.floor(takeoffRun / cellHeight)
     for (let r = Math.max(0, startRow - dr); r <= Math.min(rows - 1, startRow + dr); r++) {
