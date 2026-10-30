@@ -5,7 +5,7 @@
   import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
   import { onMount } from 'svelte'
   import type { LngLat } from '../lib/terrain/geo'
-  import type { Bounds } from '../lib/offline/areas'
+  import type { Bounds, OfflineArea } from '../lib/offline/areas'
   import { BASEMAPS, initialStyle, type BasemapId } from '../lib/map/style'
   import { AWS_TERRARIUM, SWISS_ARCHIVE } from '../lib/terrain/loader'
 
@@ -36,6 +36,12 @@
     overlay: Overlay | null
     basemap: BasemapId
     showSlope: boolean
+    /** Downloaded areas to outline (dashed when they have gaps). */
+    offlineAreas: OfflineArea[]
+    /** Whether the toggle for the outlines is shown, and its state. */
+    hasOfflineAreas: boolean
+    showOfflineAreas: boolean
+    ontoggleofflineareas: () => void
     /** Fit the map to these bounds whenever the object changes. */
     fitTo: Bounds | null
     onviewchange: (bounds: Bounds) => void
@@ -58,6 +64,10 @@
     basemap,
     showSlope,
     ontoggleslope,
+    offlineAreas,
+    hasOfflineAreas,
+    showOfflineAreas,
+    ontoggleofflineareas,
     fitTo,
     onviewchange,
     onpick,
@@ -108,6 +118,12 @@
       const empty = { type: 'FeatureCollection' as const, features: [] }
       m.addSource('route', { type: 'geojson', data: empty })
       m.addSource('highlight', { type: 'geojson', data: empty })
+      m.addSource('offline-areas', { type: 'geojson', data: empty })
+      // Downloaded areas: a light tint under the AGL overlay (inserted below the slopes)…
+      m.addLayer(
+        { id: 'offline-areas-fill', type: 'fill', source: 'offline-areas', paint: { 'fill-color': '#1f4e9c', 'fill-opacity': 0.06 } },
+        'slope',
+      )
       // Other routes: thin, gray, clickable.
       m.addLayer({
         id: 'route-other',
@@ -143,6 +159,38 @@
       })
       // Slope classes above the AGL overlay (inserted below it), under the routes.
       m.moveLayer('slope', 'route-other')
+      // …and an outline above it, under the routes.
+      m.addLayer(
+        {
+          id: 'offline-areas-casing',
+          type: 'line',
+          source: 'offline-areas',
+          layout: { 'line-join': 'round' },
+          paint: { 'line-color': '#ffffff', 'line-width': 4, 'line-opacity': 0.8 },
+        },
+        'route-other',
+      )
+      m.addLayer(
+        {
+          id: 'offline-areas',
+          type: 'line',
+          source: 'offline-areas',
+          filter: ['==', ['get', 'complete'], true],
+          layout: { 'line-join': 'round' },
+          paint: { 'line-color': '#1f4e9c', 'line-width': 2 },
+        },
+        'route-other',
+      )
+      m.addLayer(
+        {
+          id: 'offline-areas-gaps',
+          type: 'line',
+          source: 'offline-areas',
+          filter: ['!=', ['get', 'complete'], true],
+          paint: { 'line-color': '#1f4e9c', 'line-width': 2, 'line-dasharray': [2, 1.5] },
+        },
+        'route-other',
+      )
       m.on('mouseenter', 'route-other', () => (m.getCanvas().style.cursor = 'pointer'))
       m.on('mouseleave', 'route-other', () => (m.getCanvas().style.cursor = ''))
       m.addLayer({
@@ -274,6 +322,27 @@
 
   $effect(() => {
     if (!map || !loaded) return
+    const features = offlineAreas.map(({ bounds: b, complete }) => ({
+      type: 'Feature' as const,
+      properties: { complete },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [
+          [
+            [b.west, b.south],
+            [b.east, b.south],
+            [b.east, b.north],
+            [b.west, b.north],
+            [b.west, b.south],
+          ],
+        ],
+      },
+    }))
+    ;(map.getSource('offline-areas') as GeoJSONSource).setData({ type: 'FeatureCollection', features })
+  })
+
+  $effect(() => {
+    if (!map || !loaded) return
     for (const id of Object.keys(BASEMAPS)) map.setLayoutProperty(id, 'visibility', id === basemap ? 'visible' : 'none')
   })
 
@@ -340,6 +409,17 @@
   <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
     Slopes &gt; 30°
   </button>
+  {#if hasOfflineAreas}
+    <button
+      type="button"
+      class="layer-toggle offline-toggle"
+      aria-pressed={showOfflineAreas}
+      onclick={ontoggleofflineareas}
+      title="Outline the areas downloaded for offline use"
+    >
+      Offline areas
+    </button>
+  {/if}
 {/if}
 
 <style>
@@ -411,6 +491,10 @@
     border: 0;
     border-radius: 4px;
     box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+  }
+
+  .offline-toggle {
+    top: 140px;
   }
 
   .layer-toggle[aria-pressed='true'] {

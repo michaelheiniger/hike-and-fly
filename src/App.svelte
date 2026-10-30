@@ -7,7 +7,7 @@
   import RouteSummary from './components/RouteSummary.svelte'
   import OfflinePanel from './components/OfflinePanel.svelte'
   import Waypoints from './components/Waypoints.svelte'
-  import type { Bounds } from './lib/offline/areas'
+  import { listAreas, type Bounds, type OfflineArea } from './lib/offline/areas'
   import { PlannerClient, type Busy } from './lib/compute/client'
   import type { ReachRequest, ReachResult } from './lib/compute/reach'
   import type { RouteRequest, RouteResult } from './lib/compute/route'
@@ -46,6 +46,7 @@
   let hover = $state<LngLat | null>(null)
   let view = $state<Bounds | null>(null)
   let fitTo = $state<Bounds | null>(null)
+  let offlineAreas = $state<OfflineArea[]>(listAreas())
   let online = $state(navigator.onLine)
   addEventListener('online', () => (online = true))
   addEventListener('offline', () => (online = false))
@@ -303,6 +304,10 @@
     {basemap}
     showSlope={preferences.showSlope}
     ontoggleslope={() => (preferences.showSlope = !preferences.showSlope)}
+    offlineAreas={preferences.showOfflineAreas ? offlineAreas : []}
+    hasOfflineAreas={offlineAreas.length > 0}
+    showOfflineAreas={preferences.showOfflineAreas}
+    ontoggleofflineareas={() => (preferences.showOfflineAreas = !preferences.showOfflineAreas)}
     {fitTo}
     onviewchange={(b) => (view = b)}
     onpick={pick}
@@ -391,6 +396,7 @@
       {#snippet footer()}
         <OfflinePanel
           {view}
+          bind:areas={offlineAreas}
           {online}
           folded={!narrow}
           onshow={(b) => {

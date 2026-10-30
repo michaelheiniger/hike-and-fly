@@ -16,19 +16,20 @@
   interface Props {
     /** Area currently shown on the map. */
     view: Bounds | null
+    /** Saved areas, shared with the map. */
+    areas: OfflineArea[]
     online: boolean
     onshow: (bounds: Bounds) => void
     /** Folds the section behind its heading, closed at first. */
     folded?: boolean
   }
 
-  let { view, online, onshow, folded = false }: Props = $props()
+  let { view, areas = $bindable(), online, onshow, folded = false }: Props = $props()
 
   /** Above this, the download is refused: zoom in or lower the detail. */
   const MAX_TILES = 30_000
 
   let mapMaxZoom = $state(14)
-  let areas = $state<OfflineArea[]>(listAreas())
   let progress = $state<DownloadProgress | null>(null)
   let message = $state<string | null>(null)
   let storage = $state<{ usage: number; quota: number } | null>(null)

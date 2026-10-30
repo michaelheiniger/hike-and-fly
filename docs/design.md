@@ -237,6 +237,8 @@ dialog before sending. A hidden checkbox catches naive bots.
   already stored are reused, deleting an area deletes only the tiles no other area uses,
   and downloading the same area again replaces it. Older areas keep their own cache
   (`hf-area-<id>`).
+  - Saved areas are outlined on the map (dashed when some tiles failed), with a map button
+    to hide them; the choice is kept with the other display preferences.
   - swisstopo map and slope-class tiles, zooms 8 to the chosen detail (13–16), under their
     real URLs, served by the service worker. OpenTopoMap is excluded: its policy forbids
     bulk downloads.
