@@ -6,6 +6,7 @@
   import { DEFAULTS, EXPLANATIONS, GLIDE_STEP, LIMITS, preferences, roundGlideRatio, settings } from '../lib/settings.svelte'
   import { AWS_TERRARIUM } from '../lib/terrain/loader'
   import InfoTip from './InfoTip.svelte'
+  import LaunchDiagram from './LaunchDiagram.svelte'
 
   interface Props {
     result: ReachResult | null
@@ -159,21 +160,6 @@
     </span>
   </div>
 
-  {#if settings.launchZone > 0}
-    <table class="ramp small">
-      <tbody>
-        <tr>
-          <th scope="row">Distance (m)</th>
-          {#each ramp as r (r.distance)}<td>{Math.round(r.distance)}</td>{/each}
-        </tr>
-        <tr>
-          <th scope="row">Clearance (m)</th>
-          {#each ramp as r (r.distance)}<td>{Math.round(r.clearance)}</td>{/each}
-        </tr>
-      </tbody>
-    </table>
-  {/if}
-
   <div class="field">
     <span class="label">
       <label for="takeoff-run">Takeoff run</label>
@@ -193,6 +179,23 @@
       <span class="unit">m</span>
     </span>
   </div>
+
+  <LaunchDiagram clearance={settings.clearance} launchZone={settings.launchZone} takeoffRun={settings.takeoffRun} />
+
+  {#if settings.launchZone > 0}
+    <table class="ramp small">
+      <tbody>
+        <tr>
+          <th scope="row">Distance (m)</th>
+          {#each ramp as r (r.distance)}<td>{Math.round(r.distance)}</td>{/each}
+        </tr>
+        <tr>
+          <th scope="row">Clearance (m)</th>
+          {#each ramp as r (r.distance)}<td>{Math.round(r.clearance)}</td>{/each}
+        </tr>
+      </tbody>
+    </table>
+  {/if}
 
   <div class="field">
     <span class="label">
