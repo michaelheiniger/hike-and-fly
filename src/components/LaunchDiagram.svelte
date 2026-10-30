@@ -40,10 +40,14 @@
   /** The full clearance is marked at the right end, beyond the launch zone, its label in the margin. */
   const full = $derived(length)
   const groundArea = $derived(`${line(ground)}L${x(length)},${margin.top + plotH}L${x(0)},${margin.top + plotH}Z`)
-  /** Distances along the axis, without labels that would overlap. */
-  const ticks = $derived(
-    [0, takeoffRun, zoneEnd].filter((d, i, all) => i === 0 || (d > all[i - 1] && x(d) - x(all[i - 1]) > 34)),
-  )
+  /** Distances along the axis; of two that would overlap, the farther one (the liftoff over the start). */
+  const ticks = $derived.by(() => {
+    const kept: number[] = []
+    for (const d of [zoneEnd, takeoffRun, 0]) if (!kept.length || x(kept[0]) - x(d) > 34) kept.unshift(d)
+    return kept
+  })
+  /** A narrow run is labelled from the start rather than centered on it. */
+  const runWide = $derived(x(takeoffRun) - x(0) > 26)
 </script>
 
 <div bind:clientWidth={W}>
@@ -78,8 +82,10 @@
     {/if}
 
     <!-- Axis: band names, then distances from the start. -->
-    {#if takeoffRun > 0 && x(takeoffRun) - x(0) > 26}
-      <text class="label" x={(x(0) + x(takeoffRun)) / 2} y={H - 18} text-anchor="middle">Run</text>
+    {#if takeoffRun > 0}
+      <text class="label" x={runWide ? (x(0) + x(takeoffRun)) / 2 : x(0)} y={H - 18} text-anchor={runWide ? 'middle' : 'start'}>
+        Run
+      </text>
     {/if}
     {#if launchZone > 0}
       <text class="label" x={(x(takeoffRun) + x(zoneEnd)) / 2} y={H - 18} text-anchor="middle">Launch zone</text>

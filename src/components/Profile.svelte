@@ -122,12 +122,20 @@
   /** The takeoff run (on the ground, to the liftoff), then the launch zone where the clearance ramps up. */
   const runEnd = $derived(route.liftoff.distance)
   const zoneEnd = $derived(Math.min(length, runEnd + launchZone))
-  /** Visible part of a band, in pixels; its label is shown when wide enough. */
+  /** Visible part of a band, in pixels. */
   const visible = (from: number, to: number) => {
     const left = Math.max(x(from), margin.left)
     return { left, width: Math.min(x(to), margin.left + plotW) - left }
   }
-  const labelFits = (from: number, to: number, chars: number) => visible(from, to).width >= chars * 6 + 8
+  /** Where the band labels start, null when hidden. The run is often a few pixels wide: its
+   *  label starts at the run, a line higher when the launch zone's would overlap it. */
+  const runLabel = $derived(runEnd > 0 && visible(0, runEnd).width > 0 ? visible(0, runEnd).left + 4 : null)
+  const zoneLabel = $derived.by(() => {
+    if (zoneEnd <= runEnd) return null
+    const band = visible(runEnd, zoneEnd)
+    return band.width >= 11 * 6 + 8 ? band.left + 4 : null
+  })
+  const runLabelRaised = $derived(runLabel !== null && zoneLabel !== null && zoneLabel < runLabel + 30)
 
   const legendGradient = $derived(`linear-gradient(to right, ${bands.map((b) => b.color).join(', ')})`)
   const clearanceLine = $derived(path(points.map((p) => [p.distance, p.terrain + clearanceAt(p.distance)])))
@@ -303,11 +311,11 @@
         <path class="terrain-area" d={terrainArea} />
         <path class="terrain" d={terrainLine} />
         <!-- Band labels at the bottom, over the terrain: the glide path starts at the top. -->
-        {#if runEnd > 0 && labelFits(0, runEnd, 3)}
-          <text class="zone-label" x={visible(0, runEnd).left + 4} y={margin.top + plotH - 5}>Run</text>
+        {#if runLabel !== null}
+          <text class="zone-label" x={runLabel} y={margin.top + plotH - (runLabelRaised ? 19 : 5)}>Run</text>
         {/if}
-        {#if zoneEnd > runEnd && labelFits(runEnd, zoneEnd, 11)}
-          <text class="zone-label" x={visible(runEnd, zoneEnd).left + 4} y={margin.top + plotH - 5}>Launch zone</text>
+        {#if zoneLabel !== null}
+          <text class="zone-label" x={zoneLabel} y={margin.top + plotH - 5}>Launch zone</text>
         {/if}
         <path class="clearance" d={clearanceLine} />
         <path class="glide-casing" d={glideLine} />
