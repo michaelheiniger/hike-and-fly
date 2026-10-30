@@ -309,6 +309,7 @@
     hasOfflineAreas={offlineAreas.length > 0}
     showOfflineAreas={preferences.showOfflineAreas}
     ontoggleofflineareas={() => (preferences.showOfflineAreas = !preferences.showOfflineAreas)}
+    onreport={() => reportDialog.open()}
     {fitTo}
     onviewchange={(b) => (view = b)}
     onpick={pick}
@@ -426,11 +427,6 @@
         />
       {/snippet}
     </AssumptionsPanel>
-
-    <section class="report">
-      <button type="button" class="link" onclick={() => reportDialog.open()}>Report an issue</button>
-      <span class="hint">With this plan and its results attached, so the problem can be reproduced.</span>
-    </section>
   </aside>
 
   <ReportDialog bind:this={reportDialog} context={reportContext} />
@@ -542,13 +538,6 @@
   .hint {
     margin: 0;
     color: var(--text-muted);
-  }
-
-  .report {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 12px;
   }
 
   .link {

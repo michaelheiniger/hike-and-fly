@@ -42,6 +42,8 @@
     hasOfflineAreas: boolean
     showOfflineAreas: boolean
     ontoggleofflineareas: () => void
+    /** Opens the issue report. */
+    onreport: () => void
     /** Fit the map to these bounds whenever the object changes. */
     fitTo: Bounds | null
     onviewchange: (bounds: Bounds) => void
@@ -68,6 +70,7 @@
     hasOfflineAreas,
     showOfflineAreas,
     ontoggleofflineareas,
+    onreport,
     fitTo,
     onviewchange,
     onpick,
@@ -405,22 +408,34 @@
       try another browser.
     </p>
   </div>
-{:else}
-  <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
-    Slopes &gt; 30°
-  </button>
-  {#if hasOfflineAreas}
-    <button
-      type="button"
-      class="layer-toggle offline-toggle"
-      aria-pressed={showOfflineAreas}
-      onclick={ontoggleofflineareas}
-      title="Outline the areas downloaded for offline use"
-    >
-      Offline areas
-    </button>
-  {/if}
 {/if}
+<!-- Below the zoom buttons and the scale. Reporting stays possible when the map fails. -->
+<div class="map-buttons">
+  {#if !failed}
+    <button type="button" class="layer-toggle" aria-pressed={showSlope} onclick={ontoggleslope} title="swisstopo slope classes over 30°">
+      Slopes &gt; 30°
+    </button>
+    {#if hasOfflineAreas}
+      <button
+        type="button"
+        class="layer-toggle"
+        aria-pressed={showOfflineAreas}
+        onclick={ontoggleofflineareas}
+        title="Outline the areas downloaded for offline use"
+      >
+        Offline areas
+      </button>
+    {/if}
+  {/if}
+  <button
+    type="button"
+    class="layer-toggle report"
+    onclick={onreport}
+    title="Report an issue, with this plan and its results attached so the problem can be reproduced"
+  >
+    Report an issue
+  </button>
+</div>
 
 <style>
   .map :global(.route-badge) {
@@ -479,10 +494,17 @@
     color: var(--text-muted);
   }
 
-  .layer-toggle {
+  .map-buttons {
     position: absolute;
     top: 110px;
     right: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .layer-toggle {
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 500;
@@ -493,8 +515,10 @@
     box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
   }
 
-  .offline-toggle {
-    top: 140px;
+  /* An action, not a layer: set apart from the toggles. */
+  .report {
+    margin-top: 6px;
+    font-weight: 400;
   }
 
   .layer-toggle[aria-pressed='true'] {
