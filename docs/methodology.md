@@ -75,7 +75,7 @@ All lengths are meters, all altitudes are meters above mean sea level (AMSL) unl
 | `L` | Launch zone length | 500 m |
 | `c(d)` | Clearance required after flying `d` meters: `C · min(1, d / L)³` | — |
 | `R` | Takeoff run length | 30 m |
-| `H_arr` | Arrival height over the landing | 100 m |
+| `H_arr` | Arrival height over the landing | 50 m |
 
 Defaults are in [`settings.svelte.ts:20`](../src/lib/settings.svelte.ts#L20). Each one is shown
 with an explanation in the Assumptions panel, and all of them are written into the URL, so a
@@ -204,7 +204,7 @@ Code: [search.ts:126–150](../src/lib/glide/search.ts#L126), the 1 cm margin `L
 at [search.ts:82](../src/lib/glide/search.ts#L82), ground-launch test
 [`groundLaunch`, terrain.ts:58](../src/lib/compute/terrain.ts#L58).
 
-### 3.6 Arrival height `H_arr = 100 m`
+### 3.6 Arrival height `H_arr = 50 m`
 
 The landing counts as reached only when the glider arrives at least `H_arr` above it, which
 leaves height for a landing pattern. The landing cell itself needs no clearance.
@@ -510,7 +510,8 @@ The result doesn't depend on the guesses (monotonicity); good guesses only save 
 ~6 instead of ~11 on the real scenarios, and costly searches at high ratios are avoided
 (−65 % search time).
 
-**Worked example** (Niesen → Frutigen, straight line clear; `h = 2258.4 − 779.2 − 100 = 1379.2 m`,
+**Worked example** (Niesen → Frutigen, straight line clear, with the validation scenarios'
+`H_arr = 100 m` (§11); `h = 2258.4 − 779.2 − 100 = 1379.2 m`,
 distance 6 516 m):
 
 ```
@@ -681,6 +682,9 @@ them with **independent references**:
 Assertions: the app's ratio is **≥ 0.99 ×** the 2 m value (it may be slightly lower only where
 the launch zone interpolates) and **≤ 1.07 ×** it. The straight line is ≥ 0.99 × its 2 m value.
 The reach AGL over the landing never exceeds the straight-line bound.
+
+The scenarios fix their own assumptions (clearance 50 m, launch zone 500 m, takeoff run 30 m,
+arrival height 100 m), so their pinned results do not move when a default changes.
 
 | Scenario | 2 m reference | App (best route) | Difference |
 |---|---|---|---|

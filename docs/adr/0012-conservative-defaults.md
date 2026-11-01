@@ -19,7 +19,7 @@ Assumptions panel, and every setting is **editable** and **written into the URL*
 | Terrain clearance | 50 m | Sink and turbulence near slopes, data errors |
 | Launch zone | 500 m | See ADR-0011 |
 | Takeoff run | 30 m | See ADR-0011 |
-| Arrival height | 100 m | Height for a landing pattern |
+| Arrival height | 50 m | Height for a landing pattern (100 m until 2026-11-01) |
 | Wind | none | Shown as a warning, not hidden |
 
 All other approximations also err on the safe side (methodology §10).

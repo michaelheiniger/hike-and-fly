@@ -28,7 +28,7 @@ export const DEFAULTS: Assumptions = {
   clearance: 50,
   launchZone: 500,
   takeoffRun: 30,
-  arrivalHeight: 100,
+  arrivalHeight: 50,
 }
 
 /** Limits for inputs and URL values. */
