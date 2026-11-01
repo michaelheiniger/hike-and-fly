@@ -699,7 +699,21 @@ arrival height 100 m), so their pinned results do not move when a default change
 | Brienzer Rothorn → Hofstetten (flat edge, then steep) | 2.483 | 2.485 | +0.1 % |
 
 The tests also pin every route's side, ratio and length, so any change in results is noticed
-in review. The GitHub Pages workflow runs them on every push, after downloading the archive.
+in review.
+
+**Flown tracks.** [`flights.test.ts`](../src/lib/compute/flights.test.ts) checks the model
+against 221 IGC logs of real flights ([`igc-samples`](../igc-samples/README.md)), 213 of them
+over the archive:
+
+- the GNSS altitude on the ground after the landing matches the terrain: median +0.8 m,
+  5–95 % from −8 to +14 m;
+- in flight, 5 of ~296,000 fixes are more than 10 m below the terrain (GPS spikes): the
+  terrain and its placement are right;
+- on 14 descents, one per site, starting in the air at the track's first fix: the best route
+  without clearance nor arrival height never needs a higher ratio than the flown track over
+  the same terrain (closest: 1.5 % below, on a track flown almost at the best ratio), and the
+  defaults never make it easier (within 2 %: the grid search may find a slightly different
+  route). The GitHub Pages workflow runs them on every push, after downloading the archive.
 
 ---
 
