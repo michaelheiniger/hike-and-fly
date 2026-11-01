@@ -196,6 +196,9 @@ liftoff cell x (|x − start| ≤ R, z(x) < h_start):
 Counting the height run down as "distance flown" keeps `a = h_start − d / GR` valid for the
 whole search. The clearance ramp restarts from each liftoff (the search remembers where each
 path's glide began). A start in the air (start height ≥ 1 m AGL) has no run.
+A start given in AMSL up to 20 m below the ground counts as a ground launch at the
+ground: a GPS reading at the launch can be that low (on the ground after 199 flown
+landings it read down to 14 m below the terrain). Further below, the start is refused.
 
 Without the run, a gentle takeoff blocks everything. In the Amisbühl scenario, the required
 ratio comes out as 6.5 instead of 5.0.

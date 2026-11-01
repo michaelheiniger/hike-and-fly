@@ -13,7 +13,7 @@ import { localDistance, type LngLat } from '../terrain/geo'
 import { sampleBilinear, tilesCovering } from '../terrain/terrarium'
 import { archiveTiles, hasArchive } from './archive.testing'
 import { RoutePlanner, type RouteRequest } from './route'
-import type { LoadTiles } from './terrain'
+import { BELOW_GROUND_TOLERANCE, groundLaunch, startAltitudeFrom, type LoadTiles } from './terrain'
 
 const SAMPLES = fileURLToPath(new URL('../../../igc-samples/', import.meta.url))
 const NAMES = readdirSync(SAMPLES).filter((n) => !n.endsWith('.md'))
@@ -95,6 +95,8 @@ describe.skipIf(!hasArchive)('flown tracks over the terrain', () => {
     expect(gaps.length).toBeGreaterThan(120)
     expect(Math.abs(median(gaps))).toBeLessThan(3)
     expect(quantile(gaps, 0.05)).toBeGreaterThan(-15)
+    // A start read this low is still taken as a ground launch.
+    expect(Math.min(...gaps)).toBeGreaterThan(-BELOW_GROUND_TOLERANCE)
     expect(quantile(gaps, 0.95)).toBeLessThan(20)
   })
 
@@ -114,6 +116,37 @@ describe.skipIf(!hasArchive)('flown tracks over the terrain', () => {
     }
     expect(fixes).toBeGreaterThan(200_000)
     expect(below / fixes).toBeLessThan(1e-4)
+  })
+
+  it('takes the GPS altitude at every first fix as a start', () => {
+    // The recorder starts in flight or at the launch. Not in the first 5 s: right after
+    // power-on the GPS may not have settled (one log reads 180 m low, then right a
+    // second later).
+    for (const { flight, terrain } of covered) {
+      const t0 = flight.fixes[0].time + 5
+      const first = flight.flown.findIndex((x) => x.valid && x.gpsAltitude !== null && x.time >= t0)
+      const gps = flight.flown[first].gpsAltitude!
+      expect(startAltitudeFrom(gps, 'amsl', terrain[first]), flight.name).toBe(Math.max(gps, terrain[first]))
+    }
+  })
+
+  it('plans a start read below the ground as a ground launch', { timeout: 60_000 }, async () => {
+    // As low as the GPS read on the ground after the landings (see above).
+    const { flight, terrain } = covered.find((c) => c.flight.name.startsWith('3b30d585'))!
+    const result = await new RoutePlanner(loadTiles, { maxZoom }).plan({
+      start: flight.flown[0],
+      landing: flight.flown[flight.flown.length - 1],
+      startHeight: terrain[0] - 14,
+      startHeightMode: 'amsl',
+      glideRatio: 5,
+      clearance: 50,
+      launchZone: 500,
+      takeoffRun: 30,
+      arrivalHeight: 50,
+    })
+    expect(result.startAltitude).toBe(result.startElevation)
+    expect(groundLaunch(result.startAltitude, result.startElevation)).toBe(true)
+    expect(result.options[0].requiredGlideRatio).toBeLessThan(10)
   })
 
   /**

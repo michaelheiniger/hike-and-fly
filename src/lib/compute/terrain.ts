@@ -44,13 +44,21 @@ export async function groundElevation(p: LngLat, loadTiles: LoadTiles, options: 
   return sampleBilinear(tiles, z, p.lng, p.lat)
 }
 
-/** Start altitude AMSL from the start height and its reference. */
+/**
+ * How far an AMSL start may lie below the ground and still be taken as a ground launch (m).
+ * A GPS altitude read at the launch can be some meters below the elevation used here,
+ * which keeps the highest point per pixel offline: on the ground after 199 flown
+ * landings, the GPS read down to 14 m below the terrain.
+ */
+export const BELOW_GROUND_TOLERANCE = 20
+
+/** Start altitude AMSL from the start height and its reference; never below the ground. */
 export function startAltitudeFrom(height: number, mode: HeightMode, ground: number): number {
   const altitude = mode === 'agl' ? ground + height : height
-  if (altitude < ground - 0.5) {
+  if (altitude < ground - BELOW_GROUND_TOLERANCE) {
     throw new PlanError({ code: 'belowGround', altitude: Math.round(altitude), ground: Math.round(ground) })
   }
-  return altitude
+  return Math.max(altitude, ground)
 }
 
 /** True when the start is on the ground: a takeoff run is possible, not in the air. */

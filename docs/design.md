@@ -149,7 +149,8 @@ stay in English.
 | Elevation resolution | depends on source (~10–30 m) | Shown so the pilot knows the data limits. |
 
 **Start point.** With a start height above 0 AGL, the point is a "start" (e.g. the top of a
-thermal) rather than strictly a takeoff. The math is identical.
+thermal) rather than strictly a takeoff. The math is identical. A start given in AMSL up to 20 m
+below the ground (a GPS reading at the launch) is a ground launch at the ground.
 
 **Search bounds.** The grid extends to the maximum possible glide distance:
 `(h_start − lowest terrain nearby) × GR`, capped to keep memory and time bounded. Resolution
