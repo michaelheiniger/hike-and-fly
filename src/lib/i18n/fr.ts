@@ -23,6 +23,8 @@ export const fr: Messages = {
     landing: 'Atterrissage',
     reportIssue: 'Signaler un problème',
     reportHint: 'Avec ce plan et ses résultats joints, pour que le problème puisse être reproduit.',
+    disclaimer:
+      'Fourni tel quel, sans aucune garantie d’exactitude ni de justesse. Les résultats sont des estimations tirées d’un modèle simplifié et de données d’altitude : vérifiez vous-même le terrain, la météo et l’espace aérien. Vous volez à vos propres risques.',
     launchZone: 'Zone de décollage',
     notReachable: 'Non atteignable',
     kmFlown: (km) => `${km} km parcourus`,

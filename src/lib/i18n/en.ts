@@ -23,6 +23,8 @@ export const en = {
     landing: 'Landing',
     reportIssue: 'Report an issue',
     reportHint: 'With this plan and its results attached, so the problem can be reproduced.',
+    disclaimer:
+      'Provided as is, without any guarantee of accuracy or correctness. The results are estimates from a simplified model and elevation data: check the terrain, the weather and the airspace yourself. You fly at your own risk.',
     launchZone: 'Launch zone',
     notReachable: 'Not reachable',
     kmFlown: (km: string) => `${km} km flown`,

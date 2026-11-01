@@ -458,6 +458,8 @@
       <button type="button" class="link" onclick={() => reportDialog.open()}>{t.app.reportIssue}</button>
       <span class="hint">{t.app.reportHint}</span>
     </section>
+
+    <p class="disclaimer hint">{t.app.disclaimer}</p>
   </aside>
 
   <ReportDialog bind:this={reportDialog} context={reportContext} />
@@ -576,6 +578,11 @@
     flex-direction: column;
     gap: 2px;
     font-size: 12px;
+  }
+
+  .disclaimer {
+    margin: 0;
+    font-size: 11px;
   }
 
   .link {

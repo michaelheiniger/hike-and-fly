@@ -25,6 +25,8 @@ export const de: Messages = {
     landing: 'Landeplatz',
     reportIssue: 'Problem melden',
     reportHint: 'Mit diesem Plan und seinen Ergebnissen, damit sich das Problem nachvollziehen lässt.',
+    disclaimer:
+      'Bereitgestellt wie besehen, ohne jede Gewähr für Genauigkeit oder Richtigkeit. Die Ergebnisse sind Schätzungen aus einem vereinfachten Modell und Höhendaten: Gelände, Wetter und Luftraum selbst prüfen. Fliegen auf eigene Gefahr.',
     launchZone: 'Startzone',
     notReachable: 'Nicht erreichbar',
     kmFlown: (km) => `${km} km geflogen`,
