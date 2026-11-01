@@ -29,6 +29,12 @@ All other approximations also err on the safe side (methodology §10).
 - Results understate what a good pilot in good air can do; that is intended.
 - Links reproduce a plan exactly, even after defaults change (every setting is written).
 
+## Amendment (2026-11-01): arrival height 50 m
+
+The default arrival height was lowered from 100 m to 50 m. 50 m is still considered enough
+for a landing pattern. The model leaves out many factors, such as the wing, the wind and the
+air, so pilots are responsible for adding their own margins anyway.
+
 ## Alternatives considered
 
 - **Manufacturer-like glide ratio (7–8)**: matches calm-air performance, too optimistic as
